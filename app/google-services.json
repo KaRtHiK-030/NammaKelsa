@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "665413172346",
+    "project_id": "nammakelsa-99b1f",
+    "storage_bucket": "nammakelsa-99b1f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:665413172346:android:d5863b5831b6afc7c24fc3",
+        "android_client_info": {
+          "package_name": "com.karthik.nammakelsa"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDeoTANkrWWm7BTOgL9B-orZEUNNJxwehw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
