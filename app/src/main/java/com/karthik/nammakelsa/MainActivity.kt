@@ -96,6 +96,10 @@ fun AuthScreen(role: String) {
     var password by remember {
         mutableStateOf("")
     }
+    
+    var isLoading by remember {
+        mutableStateOf(false)
+    }
 
     Column(
         modifier = Modifier
@@ -104,6 +108,7 @@ fun AuthScreen(role: String) {
                 Brush.verticalGradient(
                     listOf(
                         MaterialTheme.colorScheme.primaryContainer,
+                        MaterialTheme.colorScheme.secondaryContainer,
                         MaterialTheme.colorScheme.background
                     )
                 )
@@ -114,23 +119,35 @@ fun AuthScreen(role: String) {
     ) {
 
         Text(
-            text = "Login / Register",
+            text = "Welcome to Namma Kelsa 👷",
 
             style = MaterialTheme
                 .typography
-                .headlineMedium
+                .headlineLarge
+        )
+        
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        Text(
+            text = "Connect with skilled workers",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(32.dp))
 
         ElevatedCard(
-            shape = RoundedCornerShape(20.dp),
+            shape = RoundedCornerShape(24.dp),
 
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            
+            elevation = CardDefaults.elevatedCardElevation(
+                defaultElevation = 8.dp
+            )
         ) {
 
             Column(
-                modifier = Modifier.padding(20.dp)
+                modifier = Modifier.padding(24.dp)
             ) {
 
                 // EMAIL FIELD
@@ -144,8 +161,12 @@ fun AuthScreen(role: String) {
                     label = {
                         Text("Email")
                     },
+                    
+                    enabled = !isLoading,
 
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    
+                    shape = RoundedCornerShape(16.dp)
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -161,15 +182,20 @@ fun AuthScreen(role: String) {
                     label = {
                         Text("Password")
                     },
+                    
+                    enabled = !isLoading,
 
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    
+                    shape = RoundedCornerShape(16.dp)
                 )
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(28.dp))
 
                 // REGISTER BUTTON
                 Button(
                     onClick = {
+                        isLoading = true
 
                         auth.createUserWithEmailAndPassword(
                             email.trim(),
@@ -177,6 +203,8 @@ fun AuthScreen(role: String) {
                         )
 
                             .addOnCompleteListener { task ->
+                                
+                                isLoading = false
 
                                 if (task.isSuccessful) {
 
@@ -226,10 +254,23 @@ fun AuthScreen(role: String) {
                             }
                     },
 
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    
+                    enabled = !isLoading,
+                    
+                    shape = RoundedCornerShape(16.dp)
                 ) {
 
-                    Text("Register")
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                    } else {
+                        Text("Register", style = MaterialTheme.typography.titleMedium)
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -237,6 +278,7 @@ fun AuthScreen(role: String) {
                 // LOGIN BUTTON
                 OutlinedButton(
                     onClick = {
+                        isLoading = true
 
                         auth.signInWithEmailAndPassword(
                             email.trim(),
@@ -244,6 +286,8 @@ fun AuthScreen(role: String) {
                         )
 
                             .addOnCompleteListener { task ->
+                                
+                                isLoading = false
 
                                 if (task.isSuccessful) {
 
@@ -335,10 +379,23 @@ fun AuthScreen(role: String) {
                             }
                     },
 
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    
+                    enabled = !isLoading,
+                    
+                    shape = RoundedCornerShape(16.dp)
                 ) {
 
-                    Text("Login")
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    } else {
+                        Text("Login", style = MaterialTheme.typography.titleMedium)
+                    }
                 }
             }
         }

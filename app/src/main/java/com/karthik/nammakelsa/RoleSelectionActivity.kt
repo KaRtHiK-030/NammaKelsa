@@ -47,7 +47,8 @@ fun RoleSelectionScreen() {
             .background(
                 Brush.verticalGradient(
                     listOf(
-                        MaterialTheme.colorScheme.primaryContainer,
+                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+                        MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.2f),
                         MaterialTheme.colorScheme.background
                     )
                 )
@@ -60,12 +61,16 @@ fun RoleSelectionScreen() {
             Alignment.CenterHorizontally
     ) {
 
-        // LOGO CARD
+        // LOGO CARD WITH ENHANCED SHADOW
         Card(
             shape = CircleShape,
 
             elevation = CardDefaults.cardElevation(
-                defaultElevation = 10.dp
+                defaultElevation = 12.dp
+            ),
+            
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface
             )
         ) {
 
@@ -77,45 +82,52 @@ fun RoleSelectionScreen() {
                 contentDescription = null,
 
                 modifier = Modifier
-                    .size(140.dp)
-                    .padding(12.dp)
+                    .size(160.dp)
+                    .padding(16.dp)
                     .clip(CircleShape),
 
-                // FIXED LOGO LOOK
                 contentScale = ContentScale.Crop
             )
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(32.dp))
 
-        // APP NAME
+        // APP NAME WITH ICON
         Text(
-            text = "NammaKelsa",
+            text = "Namma Kelsa",
 
             style = MaterialTheme
                 .typography
-                .headlineLarge
+                .headlineLarge,
+                
+            color = MaterialTheme.colorScheme.primary
         )
 
         Spacer(modifier = Modifier.height(8.dp))
 
         // SUBTITLE
         Text(
-            text =
-                "Find trusted workers near you",
+            text = "Connect • Work • Grow",
 
             style = MaterialTheme
                 .typography
-                .bodyLarge
+                .titleMedium,
+                
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
-        Spacer(modifier = Modifier.height(50.dp))
+        Spacer(modifier = Modifier.height(60.dp))
+        
+        Text(
+            text = "Choose your role",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
 
-        // WORKER BUTTON
-        ElevatedButton(
-
+        // WORKER CARD BUTTON
+        ElevatedCard(
             onClick = {
-
                 val intent = Intent(
                     context,
                     MainActivity::class.java
@@ -129,25 +141,56 @@ fun RoleSelectionScreen() {
                 context.startActivity(intent)
             },
 
-            shape = RoundedCornerShape(20.dp),
+            shape = RoundedCornerShape(24.dp),
 
             modifier = Modifier
                 .fillMaxWidth()
-                .height(62.dp)
-        ) {
-
-            Text(
-                text = "Looking for Work"
+                .height(120.dp),
+                
+            elevation = CardDefaults.elevatedCardElevation(
+                defaultElevation = 6.dp,
+                pressedElevation = 2.dp
+            ),
+            
+            colors = CardDefaults.elevatedCardColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer
             )
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(24.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text(
+                        text = "👷 I'm a Worker",
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Looking for work opportunities",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                    )
+                }
+                
+                Icon(
+                    painter = painterResource(id = R.drawable.logo),
+                    contentDescription = null,
+                    modifier = Modifier.size(48.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // HIRER BUTTON
-        ElevatedButton(
-
+        // HIRER CARD BUTTON
+        ElevatedCard(
             onClick = {
-
                 val intent = Intent(
                     context,
                     MainActivity::class.java
@@ -161,16 +204,49 @@ fun RoleSelectionScreen() {
                 context.startActivity(intent)
             },
 
-            shape = RoundedCornerShape(20.dp),
+            shape = RoundedCornerShape(24.dp),
 
             modifier = Modifier
                 .fillMaxWidth()
-                .height(62.dp)
-        ) {
-
-            Text(
-                text = "Hiring Workers"
+                .height(120.dp),
+                
+            elevation = CardDefaults.elevatedCardElevation(
+                defaultElevation = 6.dp,
+                pressedElevation = 2.dp
+            ),
+            
+            colors = CardDefaults.elevatedCardColors(
+                containerColor = MaterialTheme.colorScheme.secondaryContainer
             )
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(24.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text(
+                        text = "🏢 I'm Hiring",
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Find skilled professionals",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                    )
+                }
+                
+                Icon(
+                    painter = painterResource(id = R.drawable.logo),
+                    contentDescription = null,
+                    modifier = Modifier.size(48.dp),
+                    tint = MaterialTheme.colorScheme.secondary
+                )
+            }
         }
     }
 }
