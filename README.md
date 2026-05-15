@@ -100,56 +100,29 @@ NammaKelsa
 ```
 
 ---
-
-# 📸 Application Screenshots
-
-## 🔐 Authentication Screens
+# 📸 Screenshots
 
 <div align="center">
 
-| Login Screen | Registration Screen |
-|--------------|--------------------|
-| <img src="https://github.com/user-attachments/assets/d601de8e-3708-431f-b676-be60fbf518fd" width="250"/> | <img src="https://github.com/user-attachments/assets/ac19b690-8cf0-4281-9f46-3eb5cd21031a" width="250"/> |
+<table>
+  <tr>
+    <td><img src="https://github.com/user-attachments/assets/d601de8e-3708-431f-b676-be60fbf518fd" width="220"/></td>
+    <td><img src="https://github.com/user-attachments/assets/ac19b690-8cf0-4281-9f46-3eb5cd21031a" width="220"/></td>
+    <td><img src="https://github.com/user-attachments/assets/62e66910-6179-4c21-8ee2-72edfa9609a7" width="220"/></td>
+  </tr>
+  <tr>
+    <td><img src="https://github.com/user-attachments/assets/27f52b86-5248-413d-ba8b-4fa5cfc1db32" width="220"/></td>
+    <td><img src="https://github.com/user-attachments/assets/b427a371-677d-4765-98f7-b2232e713188" width="220"/></td>
+    <td><img src="https://github.com/user-attachments/assets/382eaca8-4ddc-4db3-b0d8-d84fe54202c2" width="220"/></td>
+  </tr>
+  <tr>
+    <td><img src="https://github.com/user-attachments/assets/aa5117bb-082a-4374-a187-09fbdad74bfb" width="220"/></td>
+    <td><img src="https://github.com/user-attachments/assets/d69409e9-f19e-4ebf-a20b-dbc45f7c6ef8" width="220"/></td>
+    <td><img src="https://github.com/user-attachments/assets/b3a15543-dcce-4330-b92d-9e326d4632c0" width="220"/></td>
+  </tr>
+</table>
 
 </div>
-
----
-
-## 🏠 Home & Dashboard
-
-<div align="center">
-
-| Home Screen | Worker Listing |
-|-------------|----------------|
-| <img src="https://github.com/user-attachments/assets/62e66910-6179-4c21-8ee2-72edfa9609a7" width="250"/> | <img src="https://github.com/user-attachments/assets/27f52b86-5248-413d-ba8b-4fa5cfc1db32" width="250"/> |
-
-</div>
-
----
-
-## 👤 Worker Profile & Details
-
-<div align="center">
-
-| Worker Profile | Worker Details |
-|----------------|----------------|
-| <img src="https://github.com/user-attachments/assets/b427a371-677d-4765-98f7-b2232e713188" width="250"/> | <img src="https://github.com/user-attachments/assets/382eaca8-4ddc-4db3-b0d8-d84fe54202c2" width="250"/> |
-
-</div>
-
----
-
-## 💬 Chat & Communication
-
-<div align="center">
-
-| Chat Screen | Messaging Interface |
-|-------------|--------------------|
-| <img src="https://github.com/user-attachments/assets/aa5117bb-082a-4374-a187-09fbdad74bfb" width="250"/> | <img src="https://github.com/user-attachments/assets/d69409e9-f19e-4ebf-a20b-dbc45f7c6ef8" width="250"/> |
-
-</div>
-
----
 
 ## ⭐ Reviews & Ratings
 
