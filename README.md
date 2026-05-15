@@ -31,6 +31,7 @@
 - [Dependencies](#-dependencies)
 - [Installation & Setup](#️-installation--setup)
 - [Firebase Configuration](#-firebase-configuration)
+- [Firestore Collection Schema](#️-firestore-collection-schema)
 - [Screenshots](#-screenshots)
 - [Future Enhancements](#-future-enhancements)
 - [Contributing](#-contributing)
@@ -457,6 +458,181 @@ service cloud.firestore {
     }
   }
 }
+```
+
+---
+
+## 🗄️ Firestore Collection Schema
+
+NammaKelsa uses **Cloud Firestore** for all persistent data (profiles, requests, reviews, favorites) and **Firebase Realtime Database** exclusively for chat messages. Below is the complete schema for every collection.
+
+> **Document ID convention:** Unless stated otherwise, the document ID equals the Firebase Auth `uid` of the owning user, enabling direct lookups without extra queries.
+
+---
+
+### `users` collection
+Stores the base account record created on registration for both roles.
+
+```
+users/
+└── {uid}                         ← document ID = Firebase Auth UID
+    ├── uid            : String   # mirrors the document ID
+    ├── email          : String   # registered email address
+    ├── role           : String   # "worker" | "hirer"
+    ├── displayName    : String   # full name
+    ├── photoUrl       : String   # Firebase Storage download URL (nullable)
+    ├── phone          : String   # contact number (nullable)
+    └── createdAt      : Timestamp
+```
+
+---
+
+### `workers` collection
+Extended profile for users whose `role == "worker"`. Document ID mirrors the Auth UID.
+
+```
+workers/
+└── {workerId}                         ← document ID = Firebase Auth UID
+    ├── workerId       : String        # mirrors document ID
+    ├── name           : String        # display name
+    ├── email          : String
+    ├── phone          : String
+    ├── photoUrl       : String        # profile picture URL
+    ├── bio            : String        # short self-description
+    ├── skills         : Array<String> # e.g. ["Plumbing", "Electrical"]
+    ├── experience     : String        # e.g. "3 years"
+    ├── location       : String        # city / area
+    ├── isAvailable    : Boolean       # availability toggle
+    ├── averageRating  : Number        # recomputed on each new review (0.0–5.0)
+    ├── totalReviews   : Number        # count of reviews received
+    └── createdAt      : Timestamp
+```
+
+---
+
+### `hirers` collection
+Extended profile for users whose `role == "hirer"`.
+
+```
+hirers/
+└── {hirerId}                          ← document ID = Firebase Auth UID
+    ├── hirerId        : String
+    ├── name           : String
+    ├── email          : String
+    ├── phone          : String
+    ├── photoUrl       : String
+    ├── companyName    : String        # optional
+    ├── location       : String
+    └── createdAt      : Timestamp
+```
+
+---
+
+### `requests` collection
+Tracks every hire request sent by a hirer to a worker.
+
+```
+requests/
+└── {requestId}                        ← auto-generated document ID
+    ├── requestId      : String        # mirrors document ID
+    ├── hirerId        : String        # UID of the hirer who sent the request
+    ├── hirerName      : String        # denormalised for display
+    ├── workerId       : String        # UID of the targeted worker
+    ├── workerName     : String        # denormalised for display
+    ├── jobTitle       : String        # e.g. "Fix kitchen sink"
+    ├── jobDescription : String        # detailed description
+    ├── status         : String        # "pending" | "accepted" | "rejected"
+    ├── createdAt      : Timestamp
+    └── updatedAt      : Timestamp     # updated on status change
+```
+
+**Indexes required:**
+- `workerId ASC, createdAt DESC` — load all requests for a worker
+- `hirerId ASC, createdAt DESC` — load all requests sent by a hirer
+
+---
+
+### `reviews` collection
+Reviews written by hirers after a job is completed.
+
+```
+reviews/
+└── {reviewId}                         ← auto-generated document ID
+    ├── reviewId       : String
+    ├── workerId       : String        # worker being reviewed
+    ├── hirerId        : String        # hirer who wrote the review
+    ├── hirerName      : String        # denormalised
+    ├── hirerPhotoUrl  : String        # denormalised
+    ├── rating         : Number        # 1 – 5
+    ├── comment        : String        # written feedback
+    ├── jobTitle       : String        # context for the review
+    └── createdAt      : Timestamp
+```
+
+**Index required:**
+- `workerId ASC, createdAt DESC` — fetch all reviews for a worker in chronological order
+
+---
+
+### `favorites` subcollection
+Stored as a subcollection under each hirer document to keep favorites private per user.
+
+```
+hirers/
+└── {hirerId}/
+    └── favorites/
+        └── {workerId}                 ← document ID = worker's UID
+            ├── workerId   : String
+            ├── workerName : String    # denormalised for list display
+            ├── photoUrl   : String    # denormalised
+            ├── skills     : Array<String>
+            └── savedAt    : Timestamp
+```
+
+---
+
+### Realtime Database — `chats` node
+Chat messages are stored in Firebase **Realtime Database** (not Firestore) for low-latency streaming. The chat room ID is a deterministic composite of both UIDs, sorted alphabetically to ensure uniqueness regardless of who initiates.
+
+```
+chats/
+└── {chatId}                           ← "{smallerUid}_{largerUid}" (sorted)
+    └── messages/
+        └── {messageId}                ← push() auto ID
+            ├── senderId   : String    # UID of the sender
+            ├── senderName : String    # denormalised
+            ├── message    : String    # message body
+            ├── timestamp  : Long      # Unix ms (ServerValue.TIMESTAMP)
+            └── isRead     : Boolean
+```
+
+**Chat ID generation (Kotlin):**
+```kotlin
+fun chatId(uid1: String, uid2: String): String =
+    listOf(uid1, uid2).sorted().joinToString("_")
+```
+
+---
+
+### Schema Relationships
+
+```
+users ──────────────────────────────────────────────┐
+  │                                                  │
+  ├──► workers/{workerId}                            │
+  │         └── (averageRating ← aggregated         │
+  │              from reviews collection)            │
+  │                                                  │
+  ├──► hirers/{hirerId}                              │
+  │         └── favorites/{workerId}  (subcollection)│
+  │                                                  │
+  ├──► requests/{requestId}                          │
+  │         (hirerId + workerId foreign keys)        │
+  │                                                  │
+  └──► reviews/{reviewId}                            │
+            (hirerId + workerId foreign keys)        │
+                                                     │
+Realtime DB:  chats/{uid1_uid2}/messages  ◄──────────┘
 ```
 
 ---
