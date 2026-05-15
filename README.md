@@ -752,7 +752,7 @@ Android Developer · Firebase Enthusiast · Kotlin Learner
 [![GitHub](https://img.shields.io/badge/GitHub-KaRtHiK--030-181717?style=for-the-badge&logo=github)](https://github.com/KaRtHiK-030)
 
 </div>
-
+ 
 ---
 
 <div align="center">
