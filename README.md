@@ -124,15 +124,7 @@ NammaKelsa
 
 </div>
 
-## ⭐ Reviews & Ratings
 
-<div align="center">
-
-| Reviews System |
-|----------------|
-| <img src="https://github.com/user-attachments/assets/b3a15543-dcce-4330-b92d-9e326d4632c0" width="250"/> |
-
-</div>
 
 ---
 
