@@ -559,7 +559,7 @@ Android Developer · Firebase Enthusiast · Kotlin Learner
 
 </div>
 
----  
+---
 
 <div align="center">
   <sub>If you found this project helpful, please consider giving it a ⭐ on GitHub!</sub>
