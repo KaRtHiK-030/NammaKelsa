@@ -16,12 +16,19 @@
 <img src="https://img.shields.io/badge/Status-Active-00C853?style=for-the-badge" />
 <img src="https://img.shields.io/badge/Min%20SDK-26-blue?style=for-the-badge" />
 
+<br/><br/>
+
+<a href="https://drive.google.com/file/d/1SSd8vYDRpkvRcTTRxus6TVv_BvdjJzK-/view?usp=drive_link">
+  <img src="https://img.shields.io/badge/⬇️%20Download%20APK-v1.0.0-brightgreen?style=for-the-badge&logo=android&logoColor=white" />
+</a>
+
 </div>
 
 ---
 
 ## 📋 Table of Contents
 
+- [Download](#-download)
 - [Overview](#-overview)
 - [Features](#-features)
 - [Tech Stack](#-tech-stack)
@@ -37,6 +44,17 @@
 - [Contributing](#-contributing)
 - [License](#-license)
 - [Author](#-author)
+
+---
+
+## ⬇️ Download
+
+| Release | Link | Notes |
+|---|---|---|
+| v1.0.0 — Latest | [**Download APK**](https://drive.google.com/file/d/1SSd8vYDRpkvRcTTRxus6TVv_BvdjJzK-/view?usp=drive_link) | Requires Android 8.0 (API 26)+ |
+
+> **Installation note:** Since this APK is distributed outside the Play Store, you need to allow installation from unknown sources.
+> Go to **Settings → Apps → Special app access → Install unknown apps** and enable it for your browser or file manager.
 
 ---
 
