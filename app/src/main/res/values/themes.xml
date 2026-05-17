@@ -1,12 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+
+    <!-- App theme: cream background + light status bar by default. -->
     <style name="Theme.NammaKelsa" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/brand_cream</item>
+        <item name="android:colorBackground">@color/brand_cream</item>
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
     </style>
 
+    <!-- Splash uses the same cream so there's no flash of white/dark on cold start. -->
     <style name="Theme.NammaKelsa.Splash" parent="Theme.NammaKelsa">
-        <item name="android:windowBackground">@color/white</item>
+        <item name="android:windowBackground">@color/brand_cream</item>
     </style>
+
 </resources>

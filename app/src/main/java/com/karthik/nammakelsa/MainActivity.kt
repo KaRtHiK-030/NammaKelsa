@@ -7,11 +7,15 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.*
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
@@ -19,11 +23,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusDirection
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -33,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.karthik.nammakelsa.ui.theme.NammaKelsaTheme
+import com.karthik.nammakelsa.ui.theme.brandBackground
 
 class MainActivity : ComponentActivity() {
 
@@ -40,8 +48,6 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         val role = intent.getStringExtra("role") ?: "worker"
-
-        // Update online status against the correct collection only.
         updateOnlineStatus(role, true)
 
         setContent {
@@ -124,8 +130,8 @@ fun AuthScreen(role: String) {
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("") },
+            CenterAlignedTopAppBar(
+                title = { },
                 navigationIcon = {
                     IconButton(onClick = { (context as? Activity)?.finish() }) {
                         Icon(
@@ -134,7 +140,9 @@ fun AuthScreen(role: String) {
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = androidx.compose.ui.graphics.Color.Transparent)
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = androidx.compose.ui.graphics.Color.Transparent
+                )
             )
         },
         containerColor = androidx.compose.ui.graphics.Color.Transparent
@@ -142,84 +150,90 @@ fun AuthScreen(role: String) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        listOf(
-                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
-                            MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.25f),
-                            MaterialTheme.colorScheme.background
-                        )
-                    )
-                )
+                .background(brandBackground())
                 .padding(padding)
-                .padding(horizontal = 24.dp),
-            verticalArrangement = Arrangement.Center,
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 24.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.Top,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
-            Icon(
-                imageVector = if (role == "worker") Icons.Default.Engineering else Icons.Default.BusinessCenter,
-                contentDescription = null,
-                modifier = Modifier.size(72.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
+            // ─── Logo medallion (replaces the old Person icon) ───────────
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.surface,
+                shadowElevation = 6.dp,
+                modifier = Modifier.size(108.dp)
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.logo),
+                    contentDescription = stringResource(R.string.app_name),
+                    modifier = Modifier
+                        .padding(6.dp)
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop
+                )
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
                 text = stringResource(R.string.auth_welcome),
-                style = MaterialTheme.typography.headlineMedium,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
                 textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
             Text(
                 text = if (isLoginMode) stringResource(R.string.auth_login_subtitle)
                 else stringResource(R.string.auth_register_subtitle),
-                style = MaterialTheme.typography.bodyLarge,
+                style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             ElevatedCard(
                 shape = RoundedCornerShape(24.dp),
                 modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 8.dp)
+                colors = CardDefaults.elevatedCardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                ),
+                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 6.dp)
             ) {
                 Column(modifier = Modifier.padding(24.dp)) {
 
-                    Row(modifier = Modifier.fillMaxWidth()) {
-                        FilledTonalButton(
-                            onClick = {
-                                isLoginMode = true
-                                confirmPassword = ""
-                                confirmPasswordError = null
-                            },
-                            modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.filledTonalButtonColors(
-                                containerColor = if (isLoginMode)
-                                    MaterialTheme.colorScheme.primaryContainer
-                                else MaterialTheme.colorScheme.surfaceVariant
+                    // Segmented mode toggle
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(modifier = Modifier.padding(4.dp)) {
+                            SegmentTab(
+                                selected = isLoginMode,
+                                label = stringResource(R.string.action_login),
+                                onClick = {
+                                    isLoginMode = true
+                                    confirmPassword = ""
+                                    confirmPasswordError = null
+                                },
+                                modifier = Modifier.weight(1f)
                             )
-                        ) { Text(stringResource(R.string.action_login)) }
-
-                        Spacer(modifier = Modifier.width(12.dp))
-
-                        FilledTonalButton(
-                            onClick = { isLoginMode = false },
-                            modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.filledTonalButtonColors(
-                                containerColor = if (!isLoginMode)
-                                    MaterialTheme.colorScheme.primaryContainer
-                                else MaterialTheme.colorScheme.surfaceVariant
+                            SegmentTab(
+                                selected = !isLoginMode,
+                                label = stringResource(R.string.action_register),
+                                onClick = { isLoginMode = false },
+                                modifier = Modifier.weight(1f)
                             )
-                        ) { Text(stringResource(R.string.action_register)) }
+                        }
                     }
 
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(20.dp))
 
                     OutlinedTextField(
                         value = email,
@@ -235,11 +249,11 @@ fun AuthScreen(role: String) {
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
                         keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
+                        shape = RoundedCornerShape(14.dp),
                         singleLine = true
                     )
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
                     OutlinedTextField(
                         value = password,
@@ -272,24 +286,22 @@ fun AuthScreen(role: String) {
                             onNext = { focusManager.moveFocus(FocusDirection.Down) }
                         ),
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
+                        shape = RoundedCornerShape(14.dp),
                         singleLine = true
                     )
 
                     if (isLoginMode) {
-                        Spacer(modifier = Modifier.height(8.dp))
                         TextButton(
                             onClick = {
                                 if (!validateEmail(email)) return@TextButton
-                                auth.sendPasswordResetEmail(email)
-                                    .addOnCompleteListener { task ->
-                                        Toast.makeText(
-                                            context,
-                                            if (task.isSuccessful) resetEmailSent
-                                            else task.exception?.localizedMessage ?: loginFailed,
-                                            Toast.LENGTH_LONG
-                                        ).show()
-                                    }
+                                auth.sendPasswordResetEmail(email).addOnCompleteListener { task ->
+                                    Toast.makeText(
+                                        context,
+                                        if (task.isSuccessful) resetEmailSent
+                                        else task.exception?.localizedMessage ?: loginFailed,
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                }
                             },
                             modifier = Modifier.align(Alignment.End)
                         ) { Text(stringResource(R.string.auth_forgot_password)) }
@@ -301,7 +313,7 @@ fun AuthScreen(role: String) {
                         exit = shrinkVertically() + fadeOut()
                     ) {
                         Column {
-                            Spacer(modifier = Modifier.height(16.dp))
+                            Spacer(modifier = Modifier.height(12.dp))
                             OutlinedTextField(
                                 value = confirmPassword,
                                 onValueChange = {
@@ -327,14 +339,15 @@ fun AuthScreen(role: String) {
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
                                 keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
                                 modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(16.dp),
+                                shape = RoundedCornerShape(14.dp),
                                 singleLine = true
                             )
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(28.dp))
+                    Spacer(modifier = Modifier.height(24.dp))
 
+                    // ─── Submit button — solid emerald, white text, ALWAYS visible ──
                     Button(
                         onClick = {
                             val ok = validateEmail(email) and
@@ -344,7 +357,6 @@ fun AuthScreen(role: String) {
 
                             isLoading = true
 
-                            // NOTE: never trim/transform passwords. Trimming changes user input and silently breaks logins.
                             if (isLoginMode) {
                                 auth.signInWithEmailAndPassword(email.trim(), password)
                                     .addOnCompleteListener { task ->
@@ -406,25 +418,37 @@ fun AuthScreen(role: String) {
                                     }
                             }
                         },
-                        modifier = Modifier.fillMaxWidth().height(56.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
                         enabled = !isLoading,
-                        shape = RoundedCornerShape(16.dp)
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor   = MaterialTheme.colorScheme.onPrimary
+                        ),
+                        elevation = ButtonDefaults.buttonElevation(
+                            defaultElevation = 2.dp,
+                            pressedElevation = 0.dp
+                        )
                     ) {
                         if (isLoading) {
                             CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp),
+                                modifier = Modifier.size(22.dp),
                                 color = MaterialTheme.colorScheme.onPrimary,
                                 strokeWidth = 3.dp
                             )
                         } else {
                             Text(
-                                if (isLoginMode) stringResource(R.string.action_login) else stringResource(R.string.action_register),
-                                style = MaterialTheme.typography.titleMedium
+                                text = if (isLoginMode) stringResource(R.string.action_login)
+                                else stringResource(R.string.action_register),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold
                             )
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
                     Text(
                         text = if (isLoginMode) stringResource(R.string.auth_switch_to_register)
@@ -436,6 +460,42 @@ fun AuthScreen(role: String) {
                     )
                 }
             }
+
+            Spacer(modifier = Modifier.height(40.dp))
+        }
+    }
+}
+
+@Composable
+private fun SegmentTab(
+    selected: Boolean,
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val container = if (selected) MaterialTheme.colorScheme.primary
+                    else androidx.compose.ui.graphics.Color.Transparent
+    val content   = if (selected) MaterialTheme.colorScheme.onPrimary
+                    else MaterialTheme.colorScheme.onSurfaceVariant
+
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(10.dp),
+        color = container,
+        contentColor = content,
+        modifier = modifier
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 10.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium
+            )
         }
     }
 }

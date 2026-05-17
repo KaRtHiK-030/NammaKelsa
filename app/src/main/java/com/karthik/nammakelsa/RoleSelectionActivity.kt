@@ -7,8 +7,10 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BusinessCenter
 import androidx.compose.material.icons.filled.Engineering
@@ -17,7 +19,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -25,6 +26,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.karthik.nammakelsa.ui.theme.NammaKelsaTheme
+import com.karthik.nammakelsa.ui.theme.brandBackground
 
 class RoleSelectionActivity : ComponentActivity() {
 
@@ -46,38 +48,32 @@ fun RoleSelectionScreen() {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(
-                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
-                        MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.25f),
-                        MaterialTheme.colorScheme.background
-                    )
-                )
-            )
-            .padding(24.dp),
+            .background(brandBackground())
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 24.dp, vertical = 32.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
 
-        // Logo
-        Card(
+        // ─── Logo medallion ────────────────────────────────────────────────
+        Surface(
             shape = CircleShape,
-            elevation = CardDefaults.cardElevation(defaultElevation = 12.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            color = MaterialTheme.colorScheme.surface,
+            shadowElevation = 8.dp,
+            tonalElevation = 0.dp,
+            modifier = Modifier.size(160.dp)
         ) {
             Image(
                 painter = painterResource(id = R.drawable.logo),
                 contentDescription = stringResource(id = R.string.app_name),
                 modifier = Modifier
-                    .size(160.dp)
-                    .padding(16.dp)
+                    .padding(8.dp)
                     .clip(CircleShape),
                 contentScale = ContentScale.Crop
             )
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(28.dp))
 
         Text(
             text = stringResource(id = R.string.app_name),
@@ -86,7 +82,7 @@ fun RoleSelectionScreen() {
             fontWeight = FontWeight.Bold
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(6.dp))
 
         Text(
             text = stringResource(id = R.string.app_tagline),
@@ -110,6 +106,7 @@ fun RoleSelectionScreen() {
             icon = Icons.Default.Engineering,
             container = MaterialTheme.colorScheme.primaryContainer,
             onContainer = MaterialTheme.colorScheme.onPrimaryContainer,
+            iconTint = MaterialTheme.colorScheme.primary,
             onClick = {
                 context.startActivity(
                     Intent(context, MainActivity::class.java).putExtra("role", "worker")
@@ -126,12 +123,15 @@ fun RoleSelectionScreen() {
             icon = Icons.Default.BusinessCenter,
             container = MaterialTheme.colorScheme.secondaryContainer,
             onContainer = MaterialTheme.colorScheme.onSecondaryContainer,
+            iconTint = MaterialTheme.colorScheme.secondary,
             onClick = {
                 context.startActivity(
                     Intent(context, MainActivity::class.java).putExtra("role", "hirer")
                 )
             }
         )
+
+        Spacer(modifier = Modifier.height(24.dp))
     }
 }
 
@@ -142,6 +142,7 @@ private fun RoleCard(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     container: androidx.compose.ui.graphics.Color,
     onContainer: androidx.compose.ui.graphics.Color,
+    iconTint: androidx.compose.ui.graphics.Color,
     onClick: () -> Unit
 ) {
     ElevatedCard(
@@ -149,15 +150,15 @@ private fun RoleCard(
         shape = RoundedCornerShape(24.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .height(120.dp),
+            .heightIn(min = 120.dp),
         elevation = CardDefaults.elevatedCardElevation(
-            defaultElevation = 6.dp,
-            pressedElevation = 2.dp
+            defaultElevation = 4.dp,
+            pressedElevation = 1.dp
         ),
         colors = CardDefaults.elevatedCardColors(containerColor = container)
     ) {
         Row(
-            modifier = Modifier.fillMaxSize().padding(24.dp),
+            modifier = Modifier.fillMaxWidth().padding(24.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
@@ -168,19 +169,28 @@ private fun RoleCard(
                     color = onContainer,
                     fontWeight = FontWeight.Bold
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(6.dp))
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = onContainer.copy(alpha = 0.75f)
+                    color = onContainer.copy(alpha = 0.85f)
                 )
             }
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                modifier = Modifier.size(48.dp),
-                tint = onContainer
-            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.surface,
+                modifier = Modifier.size(56.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        modifier = Modifier.size(28.dp),
+                        tint = iconTint
+                    )
+                }
+            }
         }
     }
 }

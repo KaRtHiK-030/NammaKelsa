@@ -2,60 +2,91 @@ package com.karthik.nammakelsa.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// ─── Brand ──────────────────────────────────────────────────────────────────
-val BrandGreen          = Color(0xFF2E7D32)
-val BrandGreenLight     = Color(0xFFA5D6A7)
-val BrandGreenContainer = Color(0xFFC8E6C9)
+/*
+ * NammaKelsa — bright "luxury cream" palette.
+ *
+ * Brand:   deep emerald   #1F7A4D   (primary)
+ * Accent:  champagne gold #C9A227   (secondary)
+ * Surface: warm cream     #FFFBF5
+ * No neon, no dusky gradients. High contrast on every screen.
+ */
 
-val BrandTeal           = Color(0xFF00897B)
-val BrandTealLight      = Color(0xFF80CBC4)
+// ─── Brand & accents ────────────────────────────────────────────────────────
+val BrandEmerald          = Color(0xFF1F7A4D)
+val BrandEmeraldDark      = Color(0xFF155F3B)
+val BrandEmeraldSoft      = Color(0xFFD7EFE0)   // 12% tint
+val ChampagneGold         = Color(0xFFC9A227)
+val ChampagneGoldSoft     = Color(0xFFFAEFC8)
+val WarmCream             = Color(0xFFFFFBF5)
+val Ivory                 = Color(0xFFFAF6EE)
+val SoftCharcoal          = Color(0xFF1B1F1C)
 
-// ─── Status / Accents ───────────────────────────────────────────────────────
-val SuccessGreen   = Color(0xFF00C853)
-val WarningOrange  = Color(0xFFFF9100)
-val ErrorRed       = Color(0xFFC62828)
-val InfoBlue       = Color(0xFF1976D2)
-val StarYellow     = Color(0xFFFFC107)
-val WhatsAppGreen  = Color(0xFF25D366)
+// Status accents (used sparingly as 12-15% tints, never solid neon)
+val SuccessGreen   = Color(0xFF2E7D32)
+val WarningOrange  = Color(0xFFE07B00)
+val ErrorRed       = Color(0xFFB3261E)
+val InfoBlue       = Color(0xFF1565C0)
+val StarYellow     = Color(0xFFE6B400)
+val WhatsAppGreen  = Color(0xFF1FAE5C)   // muted vs pure 0xFF25D366
 
 // ─── Light scheme ───────────────────────────────────────────────────────────
-val LightPrimary           = BrandGreen
-val LightOnPrimary         = Color.White
-val LightPrimaryContainer  = BrandGreenContainer
-val LightOnPrimaryContainer= Color(0xFF002106)
+val LightPrimary              = BrandEmerald
+val LightOnPrimary            = Color.White
+val LightPrimaryContainer     = BrandEmeraldSoft
+val LightOnPrimaryContainer   = Color(0xFF0B3520)
 
-val LightSecondary         = BrandTeal
-val LightOnSecondary       = Color.White
-val LightSecondaryContainer= Color(0xFFB2DFDB)
-val LightOnSecondaryContainer = Color(0xFF002923)
+val LightSecondary            = ChampagneGold
+val LightOnSecondary          = Color(0xFF2A1F00)
+val LightSecondaryContainer   = ChampagneGoldSoft
+val LightOnSecondaryContainer = Color(0xFF3F2E00)
 
-val LightBackground        = Color(0xFFF6F8F6)
-val LightOnBackground      = Color(0xFF1A1C19)
-val LightSurface           = Color.White
-val LightOnSurface         = Color(0xFF1A1C19)
-val LightSurfaceVariant    = Color(0xFFE0E4DD)
-val LightOnSurfaceVariant  = Color(0xFF424940)
+val LightTertiary             = Color(0xFF5C6BC0)        // soft indigo, used very lightly
+val LightOnTertiary           = Color.White
+val LightTertiaryContainer    = Color(0xFFE0E4FA)
+val LightOnTertiaryContainer  = Color(0xFF1A237E)
 
-val LightOutline           = Color(0xFF72796F)
-val LightOutlineVariant    = Color(0xFFC2C8BC)
+val LightBackground           = WarmCream
+val LightOnBackground         = SoftCharcoal
+val LightSurface              = Color.White
+val LightOnSurface            = SoftCharcoal
+val LightSurfaceVariant       = Ivory
+val LightOnSurfaceVariant     = Color(0xFF55564F)
+val LightSurfaceContainer     = Color(0xFFF5EFE3)
+val LightSurfaceContainerHigh = Color(0xFFEFE7D6)
+
+val LightOutline              = Color(0xFFB6B5AC)
+val LightOutlineVariant       = Color(0xFFE2DFD4)
+
+val LightErrorContainer       = Color(0xFFFFE3DF)
+val LightOnErrorContainer     = Color(0xFF410002)
 
 // ─── Dark scheme ────────────────────────────────────────────────────────────
-val DarkPrimary            = Color(0xFF8AD691)
-val DarkOnPrimary          = Color(0xFF003910)
-val DarkPrimaryContainer   = Color(0xFF1B5E20)
-val DarkOnPrimaryContainer = Color(0xFFC8E6C9)
+val DarkPrimary               = Color(0xFF7BD3A3)
+val DarkOnPrimary             = Color(0xFF003822)
+val DarkPrimaryContainer      = Color(0xFF1F7A4D)
+val DarkOnPrimaryContainer    = Color(0xFFD7EFE0)
 
-val DarkSecondary          = Color(0xFF4DB6AC)
-val DarkOnSecondary        = Color(0xFF003733)
-val DarkSecondaryContainer = Color(0xFF004D40)
-val DarkOnSecondaryContainer = Color(0xFFB2DFDB)
+val DarkSecondary             = Color(0xFFE8C766)
+val DarkOnSecondary           = Color(0xFF2A1F00)
+val DarkSecondaryContainer    = Color(0xFF8B6E14)
+val DarkOnSecondaryContainer  = ChampagneGoldSoft
 
-val DarkBackground         = Color(0xFF101510)
-val DarkOnBackground       = Color(0xFFE2E3DE)
-val DarkSurface            = Color(0xFF181D17)
-val DarkOnSurface          = Color(0xFFE2E3DE)
-val DarkSurfaceVariant     = Color(0xFF424940)
-val DarkOnSurfaceVariant   = Color(0xFFC2C8BC)
+val DarkTertiary              = Color(0xFFB3BCFF)
+val DarkOnTertiary            = Color(0xFF15226B)
+val DarkTertiaryContainer     = Color(0xFF303F9F)
+val DarkOnTertiaryContainer   = Color(0xFFE0E4FA)
 
-val DarkOutline            = Color(0xFF8C9388)
-val DarkOutlineVariant     = Color(0xFF424940)
+val DarkBackground            = Color(0xFF111712)
+val DarkOnBackground          = Color(0xFFE8EAE2)
+val DarkSurface               = Color(0xFF161C18)
+val DarkOnSurface             = Color(0xFFE8EAE2)
+val DarkSurfaceVariant        = Color(0xFF3A3F39)
+val DarkOnSurfaceVariant      = Color(0xFFC4C7BD)
+val DarkSurfaceContainer      = Color(0xFF1E251F)
+val DarkSurfaceContainerHigh  = Color(0xFF272E27)
+
+val DarkOutline               = Color(0xFF8C8F87)
+val DarkOutlineVariant        = Color(0xFF44473F)
+
+val DarkErrorContainer        = Color(0xFF93000A)
+val DarkOnErrorContainer      = Color(0xFFFFDAD6)

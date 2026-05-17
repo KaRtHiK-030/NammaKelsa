@@ -36,9 +36,9 @@ android {
         buildConfig = true
     }
 
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.15"
-    }
+    // NOTE: With Kotlin 2.0+ the `kotlin-compose` Gradle plugin manages the
+    // compose compiler version automatically; an explicit composeOptions block
+    // is no longer required and was removed.
 
     packaging {
         resources {

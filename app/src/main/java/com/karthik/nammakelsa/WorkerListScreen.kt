@@ -1,5 +1,7 @@
 package com.karthik.nammakelsa
 
+
+import com.karthik.nammakelsa.ui.theme.brandBackground
 import android.content.Intent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -76,14 +78,7 @@ fun WorkerListScreen() {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(
-                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
-                        MaterialTheme.colorScheme.background
-                    )
-                )
-            )
+            .background(brandBackground())
             .padding(16.dp)
     ) {
 
