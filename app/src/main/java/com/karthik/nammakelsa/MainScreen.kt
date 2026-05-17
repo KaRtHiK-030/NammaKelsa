@@ -11,260 +11,85 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+
+// ── Tab definitions ────────────────────────────────────────────────────────
+
+sealed class WorkerTab(val index: Int, val label: String, val icon: ImageVector) {
+    object Home     : WorkerTab(0, "Home",     Icons.Default.Home)
+    object Requests : WorkerTab(1, "Requests", Icons.Default.Notifications)
+    object Chat     : WorkerTab(2, "Chats",    Icons.Default.Chat)
+    object Profile  : WorkerTab(3, "Profile",  Icons.Default.Person)
+
+    companion object {
+        val all = listOf(Home, Requests, Chat, Profile)
+    }
+}
+
+sealed class HirerTab(val index: Int, val label: String, val icon: ImageVector) {
+    object Home     : HirerTab(0, "Home",     Icons.Default.Home)
+    object Saved    : HirerTab(1, "Saved",    Icons.Default.Favorite)
+    object Requests : HirerTab(2, "Requests", Icons.Default.Notifications)
+    object Chat     : HirerTab(3, "Chats",    Icons.Default.Chat)
+    object Profile  : HirerTab(4, "Profile",  Icons.Default.Person)
+
+    companion object {
+        val all = listOf(Home, Saved, Requests, Chat, Profile)
+    }
+}
+
+// ── MainScreen ─────────────────────────────────────────────────────────────
 
 @Composable
 fun MainScreen(role: String) {
 
-    var selectedTab by remember {
-        mutableStateOf(0)
-    }
+    var selectedTab by remember { mutableStateOf(0) }
 
     Scaffold(
-
         bottomBar = {
-
             NavigationBar {
-
-                // HOME TAB
-                NavigationBarItem(
-
-                    selected = selectedTab == 0,
-
-                    onClick = {
-                        selectedTab = 0
-                    },
-
-                    icon = {
-
-                        Icon(
-                            imageVector =
-                                Icons.Default.Home,
-
-                            contentDescription = null
-                        )
-                    },
-
-                    label = {
-                        Text("Home")
-                    }
-                )
-
-                // SAVED TAB FOR HIRER
-                if (role == "hirer") {
-
-                    NavigationBarItem(
-
-                        selected = selectedTab == 1,
-
-                        onClick = {
-                            selectedTab = 1
-                        },
-
-                        icon = {
-
-                            Icon(
-                                imageVector =
-                                    Icons.Default.Favorite,
-
-                                contentDescription = null
-                            )
-                        },
-
-                        label = {
-                            Text("Saved")
-                        }
-                    )
-                }
-
-                // REQUESTS TAB FOR WORKER
                 if (role == "worker") {
-
-                    NavigationBarItem(
-
-                        selected = selectedTab == 1,
-
-                        onClick = {
-                            selectedTab = 1
-                        },
-
-                        icon = {
-
-                            Icon(
-                                imageVector =
-                                    Icons.Default.Notifications,
-
-                                contentDescription = null
-                            )
-                        },
-
-                        label = {
-                            Text("Requests")
-                        }
-                    )
-                }
-
-                // REQUESTS TAB FOR HIRER
-                if (role == "hirer") {
-
-                    NavigationBarItem(
-
-                        selected = selectedTab == 2,
-
-                        onClick = {
-                            selectedTab = 2
-                        },
-
-                        icon = {
-
-                            Icon(
-                                imageVector =
-                                    Icons.Default.Notifications,
-
-                                contentDescription = null
-                            )
-                        },
-
-                        label = {
-                            Text("Requests")
-                        }
-                    )
-                }
-
-                // CHAT TAB
-                NavigationBarItem(
-
-                    selected =
-                        if (role == "hirer")
-                            selectedTab == 3
-                        else
-                            selectedTab == 2,
-
-                    onClick = {
-
-                        selectedTab =
-                            if (role == "hirer")
-                                3
-                            else
-                                2
-                    },
-
-                    icon = {
-
-                        Icon(
-                            imageVector =
-                                Icons.Default.Chat,
-
-                            contentDescription = null
+                    WorkerTab.all.forEach { tab ->
+                        NavigationBarItem(
+                            selected = selectedTab == tab.index,
+                            onClick  = { selectedTab = tab.index },
+                            icon     = { Icon(imageVector = tab.icon, contentDescription = null) },
+                            label    = { Text(tab.label) }
                         )
-                    },
-
-                    label = {
-                        Text("Chats")
                     }
-                )
-
-                // PROFILE TAB
-                NavigationBarItem(
-
-                    selected =
-                        if (role == "hirer")
-                            selectedTab == 4
-                        else
-                            selectedTab == 3,
-
-                    onClick = {
-
-                        selectedTab =
-                            if (role == "hirer")
-                                4
-                            else
-                                3
-                    },
-
-                    icon = {
-
-                        Icon(
-                            imageVector =
-                                Icons.Default.Person,
-
-                            contentDescription = null
+                } else {
+                    HirerTab.all.forEach { tab ->
+                        NavigationBarItem(
+                            selected = selectedTab == tab.index,
+                            onClick  = { selectedTab = tab.index },
+                            icon     = { Icon(imageVector = tab.icon, contentDescription = null) },
+                            label    = { Text(tab.label) }
                         )
-                    },
-
-                    label = {
-                        Text("Profile")
                     }
-                )
+                }
             }
         }
-
     ) { paddingValues ->
 
         Surface(
-
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-
-            when (selectedTab) {
-
-                // HOME
-                0 -> {
-
-                    if (role == "worker") {
-
-                        WorkerHomeScreen()
-
-                    } else {
-
-                        HirerHomeScreen()
-                    }
+            if (role == "worker") {
+                when (selectedTab) {
+                    WorkerTab.Home.index     -> WorkerHomeScreen()
+                    WorkerTab.Requests.index -> WorkerRequestsScreen()
+                    WorkerTab.Chat.index     -> ChatListScreen()
+                    WorkerTab.Profile.index  -> WorkerProfileScreen()
                 }
-
-                // SAVED / WORKER REQUESTS
-                1 -> {
-
-                    if (role == "hirer") {
-
-                        SavedWorkersScreen()
-
-                    } else {
-
-                        WorkerRequestsScreen()
-                    }
-                }
-
-                // HIRER REQUESTS / CHAT
-                2 -> {
-
-                    if (role == "hirer") {
-
-                        HirerRequestsScreen()
-
-                    } else {
-
-                        ChatListScreen()
-                    }
-                }
-
-                // CHAT / WORKER PROFILE
-                3 -> {
-
-                    if (role == "hirer") {
-
-                        ChatListScreen()
-
-                    } else {
-
-                        WorkerProfileScreen()
-                    }
-                }
-
-                // HIRER PROFILE
-                4 -> {
-
-                    HirerProfileScreen()
+            } else {
+                when (selectedTab) {
+                    HirerTab.Home.index     -> HirerHomeScreen()
+                    HirerTab.Saved.index    -> SavedWorkersScreen()
+                    HirerTab.Requests.index -> HirerRequestsScreen()
+                    HirerTab.Chat.index     -> ChatListScreen()
+                    HirerTab.Profile.index  -> HirerProfileScreen()
                 }
             }
         }
