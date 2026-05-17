@@ -2,81 +2,64 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- INTERNET PERMISSION -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
-    <!-- IMAGE ACCESS -->
+    <!-- Image picking. READ_MEDIA_IMAGES on 33+, READ_EXTERNAL_STORAGE only up to 32. -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission
-        android:name="android.permission.READ_MEDIA_IMAGES" />
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
 
-    <!-- OLD ANDROID SUPPORT -->
-    <uses-permission
-        android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <!-- For ACTION_DIAL/ACTION_VIEW resolution checks on Android 11+. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.DIAL" />
+            <data android:scheme="tel" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" android:host="wa.me" />
+        </intent>
+    </queries>
 
     <application
-        android:allowBackup="true"
+        android:name=".NammaKelsaApp"
+        android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.NammaKelsa">
+        android:theme="@style/Theme.NammaKelsa"
+        tools:targetApi="34">
 
-        <!-- ROLE SELECTION ACTIVITY -->
+        <!-- Splash / router (LAUNCHER) -->
         <activity
-            android:name=".RoleSelectionActivity"
-            android:exported="true">
-
+            android:name=".SplashActivity"
+            android:exported="true"
+            android:theme="@style/Theme.NammaKelsa.Splash">
             <intent-filter>
-
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
-
             </intent-filter>
-
         </activity>
 
-        <!-- MAIN ACTIVITY -->
-        <activity
-            android:name=".MainActivity"
-            android:exported="false" />
+        <activity android:name=".RoleSelectionActivity" android:exported="false" />
+        <activity android:name=".MainActivity" android:exported="false" />
+        <activity android:name=".HomeActivity" android:exported="false" />
 
-        <!-- PROFILE ACTIVITY -->
-        <activity
-            android:name=".ProfileActivity"
-            android:exported="false" />
+        <activity android:name=".ProfileActivity" android:exported="false" />
+        <activity android:name=".AddSkillActivity" android:exported="false" />
 
-        <!-- HOME ACTIVITY -->
-        <activity
-            android:name=".HomeActivity"
-            android:exported="false" />
+        <activity android:name=".WorkerDetailActivity" android:exported="false" />
+        <activity android:name=".HirerDetailActivity" android:exported="false" />
 
-        <!-- EDIT PROFILE ACTIVITY -->
-        <activity
-            android:name=".EditProfileActivity"
-            android:exported="false" />
-
-        <!-- ADD SKILL ACTIVITY -->
-        <activity
-            android:name=".AddSkillActivity"
-            android:exported="false" />
-
-        <!-- WORKER DETAIL ACTIVITY -->
-        <activity
-            android:name=".WorkerDetailActivity"
-            android:exported="false" />
-
-        <!-- CHAT ACTIVITY -->
         <activity
             android:name=".ChatActivity"
-            android:exported="false" />
-
-        <!-- HIRER DETAIL ACTIVITY -->
-        <activity
-            android:name=".HirerDetailActivity"
-            android:exported="false" />
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
 
     </application>
 

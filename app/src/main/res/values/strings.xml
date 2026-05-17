@@ -1,3 +1,190 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">NammaKelsa</string>
+    <string name="app_tagline">Connect • Work • Grow</string>
+
+    <!-- Roles -->
+    <string name="role_select_title">Choose your role</string>
+    <string name="role_worker_title">I\'m a Worker</string>
+    <string name="role_worker_subtitle">Looking for work opportunities</string>
+    <string name="role_hirer_title">I\'m Hiring</string>
+    <string name="role_hirer_subtitle">Find skilled professionals</string>
+
+    <!-- Auth -->
+    <string name="action_login">Login</string>
+    <string name="action_register">Register</string>
+    <string name="auth_welcome">Welcome to Namma Kelsa</string>
+    <string name="auth_login_subtitle">Login to your account</string>
+    <string name="auth_register_subtitle">Create a new account</string>
+    <string name="auth_email">Email Address</string>
+    <string name="auth_password">Password</string>
+    <string name="auth_confirm_password">Confirm Password</string>
+    <string name="auth_show_password">Show password</string>
+    <string name="auth_hide_password">Hide password</string>
+    <string name="auth_forgot_password">Forgot password?</string>
+    <string name="auth_reset_email_sent">Reset email sent</string>
+    <string name="auth_switch_to_register">Don\'t have an account? Switch to Register</string>
+    <string name="auth_switch_to_login">Already have an account? Switch to Login</string>
+
+    <!-- Errors / validation -->
+    <string name="err_email_required">Email is required</string>
+    <string name="err_email_invalid">Invalid email format</string>
+    <string name="err_password_required">Password is required</string>
+    <string name="err_password_short">Password must be at least 6 characters</string>
+    <string name="err_password_mismatch">Passwords do not match</string>
+    <string name="err_confirm_password_required">Please confirm your password</string>
+    <string name="err_name_required">Name is required</string>
+    <string name="err_name_short">Name must be at least 2 characters</string>
+    <string name="err_location_required">Location is required</string>
+    <string name="err_phone_required">Phone number is required</string>
+    <string name="err_phone_short">Phone number must be at least 10 digits</string>
+    <string name="err_whatsapp_required">WhatsApp number is required</string>
+    <string name="err_whatsapp_short">WhatsApp number must be at least 10 digits</string>
+    <string name="err_skill_required">Skill is required</string>
+    <string name="err_charge_required">Charge per day is required</string>
+    <string name="err_charge_invalid">Please enter a valid number</string>
+    <string name="err_charge_positive">Charge must be greater than 0</string>
+    <string name="err_charge_too_large">Charge looks too high. Please double-check.</string>
+    <string name="err_work_details_required">Please describe the work needed</string>
+    <string name="err_work_details_short">Please add a few more details (min 10 characters)</string>
+    <string name="err_review_rating_required">Please tap a star to rate</string>
+    <string name="err_review_comment_required">Please write a short comment</string>
+
+    <!-- Common actions -->
+    <string name="action_save">Save</string>
+    <string name="action_save_changes">Save Changes</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_edit">Edit</string>
+    <string name="action_back">Back</string>
+    <string name="action_call">Call</string>
+    <string name="action_chat">Chat</string>
+    <string name="action_whatsapp">WhatsApp</string>
+    <string name="action_send">Send</string>
+    <string name="action_update">Update</string>
+    <string name="action_apply">Apply</string>
+    <string name="action_clear">Clear</string>
+    <string name="action_filter">Filter</string>
+    <string name="action_logout">Logout</string>
+    <string name="action_delete_account">Delete Account</string>
+    <string name="action_remove">Remove</string>
+    <string name="action_save_worker">Save Worker</string>
+    <string name="action_saved">Saved</string>
+    <string name="action_send_request">Send Request</string>
+    <string name="action_submit_review">Submit Review</string>
+
+    <!-- Profile -->
+    <string name="profile_create_title">Create Profile</string>
+    <string name="profile_edit_title">Edit Profile</string>
+    <string name="profile_complete_subtitle">Complete your profile information</string>
+    <string name="profile_my">My Profile</string>
+    <string name="profile_full_name">Full Name</string>
+    <string name="profile_primary_skill">Primary Skill</string>
+    <string name="profile_primary_skill_hint">e.g., Carpenter, Plumber, Electrician</string>
+    <string name="profile_location">Location</string>
+    <string name="profile_location_hint">e.g., Bangalore, Karnataka</string>
+    <string name="profile_phone">Phone Number</string>
+    <string name="profile_whatsapp">WhatsApp Number</string>
+    <string name="profile_charge">Charge Per Day</string>
+    <string name="profile_charge_hint">e.g., 500, 1000, 1500</string>
+    <string name="profile_phone_prefix">+91 </string>
+    <string name="profile_choose_image">Choose Image</string>
+    <string name="profile_my_skills">My Skills</string>
+    <string name="profile_add_new_skill">Add New Skill</string>
+    <string name="profile_no_skills_title">No skills added yet</string>
+    <string name="profile_no_skills_subtitle">Add your first skill to get started</string>
+    <string name="profile_change_availability">Change Availability</string>
+    <string name="profile_hirer_account">Hirer Account</string>
+    <string name="profile_contact_information">Contact Information</string>
+    <string name="profile_account_statistics">Account Statistics</string>
+    <string name="profile_field_email">Email</string>
+    <string name="profile_field_not_provided">Not provided</string>
+    <string name="profile_stat_jobs">Posted Jobs</string>
+    <string name="profile_stat_hired">Hired Workers</string>
+    <string name="profile_stat_reviews">Reviews Given</string>
+
+    <!-- Availability -->
+    <string name="avail_available">Available</string>
+    <string name="avail_busy">Busy</string>
+    <string name="avail_offline">Offline</string>
+    <string name="avail_for_work">Available for Work</string>
+    <string name="avail_currently_busy">Currently Busy</string>
+
+    <!-- Listing -->
+    <string name="title_available_workers">Available Workers</string>
+    <string name="search_workers_hint">Search by name, skill, location</string>
+    <string name="title_saved_workers">Saved Workers</string>
+    <string name="title_chats">Chats</string>
+    <string name="title_chat">Chat</string>
+    <string name="empty_chats">No chats yet</string>
+    <string name="empty_saved">No saved workers yet</string>
+    <string name="empty_requests_worker">No requests yet</string>
+    <string name="empty_requests_worker_sub">Requests from hirers will appear here</string>
+    <string name="empty_requests_hirer">You have not sent any requests yet</string>
+    <string name="empty_workers">No workers found</string>
+    <string name="title_work_requests">Work Requests</string>
+    <string name="title_my_requests">My Requests</string>
+    <string name="title_send_work_request">Send Work Request</string>
+    <string name="hint_work_details">Work Details</string>
+    <string name="hint_work_details_help">Describe the job, location, dates, etc.</string>
+    <string name="title_rate_worker">Rate Worker</string>
+    <string name="hint_review">Write Review</string>
+    <string name="reviews_count">Reviews (%1$d)</string>
+    <string name="reviews_none">No reviews yet.</string>
+    <string name="rate_label">Daily Rate</string>
+    <string name="status_label">Status: %1$s</string>
+    <string name="charge_per_day">₹%1$s/day</string>
+    <string name="charge_with_currency">₹%1$s</string>
+
+    <!-- Chat -->
+    <string name="chat_message_hint">Message</string>
+    <string name="chat_edit_message_hint">Edit Message</string>
+    <string name="chat_clear">Clear chat</string>
+    <string name="chat_clear_confirm_title">Clear chat?</string>
+    <string name="chat_clear_confirm_body">This will permanently delete all messages in this chat. This cannot be undone.</string>
+    <string name="chat_message_copied">Copied to clipboard</string>
+    <string name="chat_message_deleted">Message deleted</string>
+    <string name="chat_edited_label">edited</string>
+    <string name="chat_no_chats">No chats yet</string>
+    <string name="chat_status_online">Online</string>
+    <string name="chat_status_offline">Offline</string>
+
+    <!-- Confirm dialogs -->
+    <string name="confirm_delete_account_title">Delete Account</string>
+    <string name="confirm_delete_account_body">Are you sure you want to delete your account? This action cannot be undone.</string>
+    <string name="confirm_delete_request_title">Delete request?</string>
+    <string name="confirm_delete_request_body">Are you sure you want to delete this request?</string>
+    <string name="confirm_remove_favorite_title">Remove from saved?</string>
+    <string name="confirm_remove_favorite_body">This worker will be removed from your saved list.</string>
+    <string name="confirm_delete_review_title">Delete review?</string>
+    <string name="confirm_delete_review_body">Your review will be permanently removed.</string>
+    <string name="confirm_delete_skill_title">Remove skill?</string>
+    <string name="confirm_delete_skill_body">This skill will be removed from your profile.</string>
+    <string name="confirm_logout_title">Logout?</string>
+    <string name="confirm_logout_body">You will need to log in again to use the app.</string>
+
+    <!-- Toasts / messages -->
+    <string name="msg_request_sent">Request sent</string>
+    <string name="msg_request_accepted">Request accepted</string>
+    <string name="msg_request_declined">Request declined</string>
+    <string name="msg_review_added">Review added</string>
+    <string name="msg_review_updated">Review updated</string>
+    <string name="msg_review_deleted">Review deleted</string>
+    <string name="msg_skill_added">Skill added</string>
+    <string name="msg_skill_removed">Skill removed</string>
+    <string name="msg_profile_created">Profile created</string>
+    <string name="msg_profile_updated">Profile updated</string>
+    <string name="msg_logged_out">Logged out</string>
+    <string name="msg_account_deleted">Account deleted</string>
+    <string name="msg_worker_saved">Worker saved</string>
+    <string name="msg_worker_removed">Worker removed</string>
+    <string name="msg_no_dialer">No dialer app found</string>
+    <string name="msg_no_whatsapp">WhatsApp not installed</string>
+    <string name="msg_login_failed">Login failed</string>
+    <string name="msg_register_failed">Registration failed</string>
+    <string name="msg_recent_login_required">For security, please log in again before deleting your account.</string>
+
+    <!-- Add skill -->
+    <string name="title_add_skill">Add New Skill</string>
+    <string name="hint_skill">Skill</string>
 </resources>

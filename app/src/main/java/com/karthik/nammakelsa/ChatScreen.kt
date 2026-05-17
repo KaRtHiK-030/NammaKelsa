@@ -3,146 +3,94 @@ package com.karthik.nammakelsa
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DeleteForever
-import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ChatScreen(
-
-    receiverId: String
-) {
+fun ChatScreen(receiverId: String, receiverName: String) {
 
     val context = LocalContext.current
+    val activity = context as? android.app.Activity
+    val db = FirebaseFirestore.getInstance()
+    val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
+    val chatId = chatIdFor(currentUserId, receiverId)
 
-    val currentUserId =
-        FirebaseAuth
-            .getInstance()
-            .currentUser
-            ?.uid ?: ""
+    var messages by remember { mutableStateOf(listOf<Message>()) }
+    var messageText by remember { mutableStateOf("") }
+    var editingMessageId by remember { mutableStateOf("") }
+    var showClearChatDialog by remember { mutableStateOf(false) }
+    val snackbar = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    val listState = rememberLazyListState()
 
-    // UNIQUE CHAT ID
-    val chatId =
+    val msgCleared = "Chat cleared"
+    val msgCopied = stringResource(R.string.chat_message_copied)
+    val msgDeleted = stringResource(R.string.chat_message_deleted)
 
-        if (currentUserId < receiverId)
-            "${currentUserId}_$receiverId"
-        else
-            "${receiverId}_$currentUserId"
-
-    var messageText by remember {
-        mutableStateOf("")
-    }
-
-    var messages by remember {
-        mutableStateOf(listOf<Message>())
-    }
-
-    var editingMessageId by remember {
-        mutableStateOf("")
-    }
-
-    // REALTIME MESSAGE LISTENER
-    LaunchedEffect(Unit) {
-
-        FirebaseFirestore
-            .getInstance()
-            .collection("chats")
-            .document(chatId)
+    DisposableEffect(chatId) {
+        if (currentUserId.isBlank() || receiverId.isBlank()) return@DisposableEffect onDispose {}
+        val reg = db.collection("chats").document(chatId)
             .collection("messages")
-
-            .orderBy(
-                "timestamp",
-                Query.Direction.ASCENDING
-            )
-
-            .addSnapshotListener { value, _ ->
-
-                if (value != null) {
-
-                    messages =
-                        value.toObjects(
-                            Message::class.java
-                        )
-                }
+            .orderBy("timestamp", Query.Direction.ASCENDING)
+            .addSnapshotListener { snap, _ ->
+                snap ?: return@addSnapshotListener
+                messages = snap.toObjects(Message::class.java)
             }
+        onDispose { reg.remove() }
+    }
+
+    // Auto-scroll to newest
+    LaunchedEffect(messages.size) {
+        if (messages.isNotEmpty()) listState.animateScrollToItem(messages.lastIndex)
     }
 
     Scaffold(
-
+        snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
-
             TopAppBar(
-
                 title = {
-                    Text("Chat")
+                    Text(
+                        text = receiverName.ifBlank { stringResource(R.string.title_chat) },
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold
+                    )
                 },
-
+                navigationIcon = {
+                    IconButton(onClick = { activity?.finish() }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
+                    }
+                },
                 actions = {
-
-                    // CLEAR ENTIRE CHAT
-                    IconButton(
-
-                        onClick = {
-
-                            FirebaseFirestore
-                                .getInstance()
-                                .collection("chats")
-                                .document(chatId)
-                                .collection("messages")
-                                .get()
-
-                                .addOnSuccessListener { result ->
-
-                                    for (doc in result.documents) {
-
-                                        doc.reference.delete()
-                                    }
-
-                                    FirebaseFirestore
-                                        .getInstance()
-                                        .collection("chats")
-                                        .document(chatId)
-                                        .delete()
-
-                                    Toast.makeText(
-                                        context,
-                                        "Chat Cleared",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                }
-                        }
-                    ) {
-
-                        Icon(
-                            imageVector =
-                                Icons.Default.DeleteForever,
-
-                            contentDescription = null
-                        )
+                    IconButton(onClick = { showClearChatDialog = true }) {
+                        Icon(Icons.Default.DeleteForever, contentDescription = stringResource(R.string.chat_clear))
                     }
                 }
             )
         }
-
     ) { paddingValues ->
-
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -150,337 +98,224 @@ fun ChatScreen(
                 .background(
                     Brush.verticalGradient(
                         listOf(
-                            MaterialTheme.colorScheme.primaryContainer,
+                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
                             MaterialTheme.colorScheme.background
                         )
                     )
                 )
         ) {
-
-            // MESSAGE LIST
-            LazyColumn(
-
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(horizontal = 12.dp),
-
-                verticalArrangement =
-                    Arrangement.spacedBy(8.dp),
-
-                contentPadding = PaddingValues(
-                    bottom = 20.dp
-                )
-            ) {
-
-                items(messages) { message ->
-
-                    val isMine =
-                        message.senderId ==
-                                currentUserId
-
-                    var expanded by remember {
-                        mutableStateOf(false)
-                    }
-
-                    Row(
-
-                        modifier = Modifier
-                            .fillMaxWidth(),
-
-                        horizontalArrangement =
-
-                            if (isMine)
-                                Arrangement.End
-                            else
-                                Arrangement.Start
-                    ) {
-
-                        ElevatedCard(
-
-                            shape = RoundedCornerShape(18.dp)
-                        ) {
-
-                            Row(
-
-                                verticalAlignment =
-                                    Alignment.CenterVertically
-                            ) {
-
-                                Text(
-
-                                    text = message.message,
-
-                                    modifier = Modifier
-                                        .padding(14.dp)
-                                        .weight(1f)
-                                )
-
-                                // THREE DOT MENU
-                                Box {
-
-                                    IconButton(
-
-                                        onClick = {
-                                            expanded = true
-                                        }
-                                    ) {
-
-                                        Icon(
-                                            imageVector =
-                                                Icons.Default.MoreVert,
-
-                                            contentDescription = null
-                                        )
-                                    }
-
-                                    DropdownMenu(
-
-                                        expanded = expanded,
-
-                                        onDismissRequest = {
-                                            expanded = false
-                                        }
-                                    ) {
-
-                                        // COPY
-                                        DropdownMenuItem(
-
-                                            text = {
-                                                Text("Copy")
-                                            },
-
-                                            onClick = {
-
-                                                val clipboard =
-                                                    context.getSystemService(
-                                                        Context.CLIPBOARD_SERVICE
-                                                    ) as ClipboardManager
-
-                                                val clip =
-                                                    ClipData.newPlainText(
-                                                        "message",
-                                                        message.message
-                                                    )
-
-                                                clipboard.setPrimaryClip(
-                                                    clip
-                                                )
-
-                                                Toast.makeText(
-                                                    context,
-                                                    "Copied",
-                                                    Toast.LENGTH_SHORT
-                                                ).show()
-
-                                                expanded = false
-                                            }
-                                        )
-
-                                        // EDIT ONLY FOR SENT MESSAGES
-                                        if (isMine) {
-
-                                            DropdownMenuItem(
-
-                                                text = {
-                                                    Text("Edit")
-                                                },
-
-                                                onClick = {
-
-                                                    messageText =
-                                                        message.message
-
-                                                    editingMessageId =
-                                                        message.messageId
-
-                                                    expanded = false
-                                                }
-                                            )
-                                        }
-
-                                        // DELETE
-                                        DropdownMenuItem(
-
-                                            text = {
-                                                Text("Delete")
-                                            },
-
-                                            onClick = {
-
-                                                if (
-                                                    message.messageId
-                                                        .isNotBlank()
-                                                ) {
-
-                                                    FirebaseFirestore
-                                                        .getInstance()
-                                                        .collection("chats")
-                                                        .document(chatId)
-                                                        .collection("messages")
-                                                        .document(
-                                                            message.messageId
-                                                        )
-                                                        .delete()
-
-                                                    Toast.makeText(
-                                                        context,
-                                                        "Message Deleted",
-                                                        Toast.LENGTH_SHORT
-                                                    ).show()
-                                                }
-
-                                                expanded = false
-                                            }
-                                        )
-                                    }
+            if (messages.isEmpty()) {
+                Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Text(
+                        text = "Say hi 👋",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(top = 12.dp, bottom = 12.dp)
+                ) {
+                    items(messages, key = { it.messageId.ifBlank { it.timestamp.toString() } }) { message ->
+                        MessageRow(
+                            message = message,
+                            isMine = message.senderId == currentUserId,
+                            onEdit = {
+                                messageText = message.message
+                                editingMessageId = message.messageId
+                            },
+                            onCopy = {
+                                val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                cm.setPrimaryClip(ClipData.newPlainText("message", message.message))
+                                scope.launch { snackbar.showSnackbar(msgCopied) }
+                            },
+                            onDelete = {
+                                if (message.messageId.isNotBlank()) {
+                                    db.collection("chats").document(chatId)
+                                        .collection("messages").document(message.messageId)
+                                        .delete()
+                                        .addOnSuccessListener { scope.launch { snackbar.showSnackbar(msgDeleted) } }
                                 }
                             }
-                        }
+                        )
                     }
                 }
             }
 
-            // INPUT AREA
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp),
-
-                verticalAlignment =
-                    Alignment.CenterVertically
-            ) {
-
-                OutlinedTextField(
-
-                    value = messageText,
-
-                    onValueChange = {
-                        messageText = it
-                    },
-
-                    label = {
-
-                        if (
-                            editingMessageId.isNotBlank()
-                        ) {
-
-                            Text("Edit Message")
-
-                        } else {
-
-                            Text("Message")
-                        }
-                    },
-
-                    modifier = Modifier.weight(1f)
-                )
-
-                Spacer(
-                    modifier = Modifier.width(10.dp)
-                )
-
-                Button(
-
-                    onClick = {
-
-                        if (messageText.isNotBlank()) {
-
-                            // EDIT MESSAGE
-                            if (
-                                editingMessageId
-                                    .isNotBlank()
-                            ) {
-
-                                FirebaseFirestore
-                                    .getInstance()
-                                    .collection("chats")
-                                    .document(chatId)
-                                    .collection("messages")
-                                    .document(
-                                        editingMessageId
-                                    )
-
-                                    .update(
-                                        "message",
-                                        messageText
-                                    )
-
-                                editingMessageId = ""
-                            }
-
-                            // SEND NEW MESSAGE
-                            else {
-
-                                val messageId =
-                                    FirebaseFirestore
-                                        .getInstance()
-                                        .collection("chats")
-                                        .document(chatId)
-                                        .collection("messages")
-                                        .document()
-                                        .id
-
-                                val message =
-                                    Message(
-
-                                        messageId =
-                                            messageId,
-
-                                        senderId =
-                                            currentUserId,
-
-                                        receiverId =
-                                            receiverId,
-
-                                        message =
-                                            messageText
-                                    )
-
-                                val chatData = hashMapOf(
-
-                                    "users" to listOf(
-                                        currentUserId,
-                                        receiverId
-                                    ),
-
-                                    "lastMessage" to messageText,
-
-                                    "timestamp" to
-                                            System.currentTimeMillis()
-                                )
-
-                                // CREATE/UPDATE CHAT DOC
-                                FirebaseFirestore
-                                    .getInstance()
-                                    .collection("chats")
-                                    .document(chatId)
-                                    .set(chatData)
-
-                                // SAVE MESSAGE
-                                FirebaseFirestore
-                                    .getInstance()
-                                    .collection("chats")
-                                    .document(chatId)
-                                    .collection("messages")
-                                    .document(messageId)
-                                    .set(message)
-                            }
-
-                            messageText = ""
-                        }
-                    }
+            // Input area
+            Surface(tonalElevation = 2.dp) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(12.dp).imePadding(),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-
-                    if (
-                        editingMessageId.isNotBlank()
+                    OutlinedTextField(
+                        value = messageText,
+                        onValueChange = { messageText = it },
+                        label = {
+                            Text(
+                                if (editingMessageId.isNotBlank()) stringResource(R.string.chat_edit_message_hint)
+                                else stringResource(R.string.chat_message_hint)
+                            )
+                        },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(24.dp),
+                        maxLines = 4
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    FilledIconButton(
+                        onClick = {
+                            val text = messageText.trim()
+                            if (text.isBlank()) return@FilledIconButton
+                            if (editingMessageId.isNotBlank()) {
+                                db.collection("chats").document(chatId)
+                                    .collection("messages").document(editingMessageId)
+                                    .update(mapOf("message" to text, "edited" to true))
+                                editingMessageId = ""
+                            } else {
+                                val ref = db.collection("chats").document(chatId)
+                                    .collection("messages").document()
+                                val now = System.currentTimeMillis()
+                                val msg = Message(
+                                    messageId  = ref.id,
+                                    senderId   = currentUserId,
+                                    receiverId = receiverId,
+                                    message    = text,
+                                    timestamp  = now
+                                )
+                                val chatMeta = mapOf(
+                                    "users" to listOf(currentUserId, receiverId),
+                                    "lastMessage" to text,
+                                    "lastSenderId" to currentUserId,
+                                    "timestamp" to now
+                                )
+                                db.collection("chats").document(chatId).set(chatMeta)
+                                ref.set(msg)
+                            }
+                            messageText = ""
+                        },
+                        modifier = Modifier.size(48.dp)
                     ) {
-
-                        Text("Update")
-
-                    } else {
-
-                        Text("Send")
+                        Icon(
+                            imageVector = if (editingMessageId.isNotBlank()) Icons.Default.Check else Icons.AutoMirrored.Filled.Send,
+                            contentDescription = if (editingMessageId.isNotBlank()) stringResource(R.string.action_update) else stringResource(R.string.action_send)
+                        )
                     }
+                }
+            }
+        }
+    }
+
+    if (showClearChatDialog) {
+        AlertDialog(
+            onDismissRequest = { showClearChatDialog = false },
+            title = { Text(stringResource(R.string.chat_clear_confirm_title)) },
+            text  = { Text(stringResource(R.string.chat_clear_confirm_body)) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        db.collection("chats").document(chatId)
+                            .collection("messages").get()
+                            .addOnSuccessListener { result ->
+                                for (doc in result.documents) doc.reference.delete()
+                                db.collection("chats").document(chatId).delete()
+                                scope.launch { snackbar.showSnackbar(msgCleared) }
+                            }
+                        showClearChatDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) { Text(stringResource(R.string.action_delete)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearChatDialog = false }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun MessageRow(
+    message: Message,
+    isMine: Boolean,
+    onEdit: () -> Unit,
+    onCopy: () -> Unit,
+    onDelete: () -> Unit
+) {
+    var menuExpanded by remember { mutableStateOf(false) }
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = if (isMine) Arrangement.End else Arrangement.Start
+    ) {
+        ElevatedCard(
+            shape = RoundedCornerShape(
+                topStart = 18.dp, topEnd = 18.dp,
+                bottomStart = if (isMine) 18.dp else 4.dp,
+                bottomEnd   = if (isMine) 4.dp  else 18.dp
+            ),
+            colors = CardDefaults.elevatedCardColors(
+                containerColor = if (isMine) MaterialTheme.colorScheme.primaryContainer
+                                 else MaterialTheme.colorScheme.surfaceVariant
+            ),
+            modifier = Modifier.widthIn(max = 280.dp)
+        ) {
+            Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
+                Row(verticalAlignment = Alignment.Top) {
+                    Text(
+                        text = message.message,
+                        modifier = Modifier.weight(1f),
+                        color = if (isMine) MaterialTheme.colorScheme.onPrimaryContainer
+                                else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Box {
+                        IconButton(onClick = { menuExpanded = true }, modifier = Modifier.size(24.dp)) {
+                            Icon(Icons.Default.MoreVert, contentDescription = "Message options", modifier = Modifier.size(16.dp))
+                        }
+                        DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                            DropdownMenuItem(
+                                text = { Text("Copy") },
+                                leadingIcon = { Icon(Icons.Default.ContentCopy, contentDescription = null) },
+                                onClick = { menuExpanded = false; onCopy() }
+                            )
+                            // Edit + Delete restricted to sender
+                            if (isMine) {
+                                DropdownMenuItem(
+                                    text = { Text("Edit") },
+                                    leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
+                                    onClick = { menuExpanded = false; onEdit() }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Delete") },
+                                    leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) },
+                                    onClick = { menuExpanded = false; onDelete() }
+                                )
+                            }
+                        }
+                    }
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (message.edited) {
+                        Text(
+                            text = stringResource(R.string.chat_edited_label),
+                            style = MaterialTheme.typography.labelSmall,
+                            fontStyle = FontStyle.Italic,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                    }
+                    Text(
+                        text = formatChatTime(message.timestamp),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
         }

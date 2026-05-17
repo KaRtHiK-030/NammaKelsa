@@ -1,208 +1,147 @@
 package com.karthik.nammakelsa
 
-import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Chat
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import coil.compose.rememberAsyncImagePainter
+import androidx.compose.ui.unit.sp
 import com.karthik.nammakelsa.ui.theme.NammaKelsaTheme
+import com.karthik.nammakelsa.ui.theme.WhatsAppGreen
 
 class HirerDetailActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        val name =
-            intent.getStringExtra("name")
-                ?: ""
-
-        val imageUrl =
-            intent.getStringExtra("imageUrl")
-                ?: ""
-
-        val location =
-            intent.getStringExtra("location")
-                ?: ""
-
-        val phone =
-            intent.getStringExtra("phone")
-                ?: ""
-
-        val whatsapp =
-            intent.getStringExtra("whatsapp")
-                ?: ""
+        val name     = intent.getStringExtra("name") ?: ""
+        val location = intent.getStringExtra("location") ?: ""
+        val phone    = intent.getStringExtra("phone") ?: ""
+        val whatsapp = intent.getStringExtra("whatsapp") ?: ""
 
         setContent {
-
             NammaKelsaTheme {
-
-                HirerDetailScreen(
-                    name,
-                    imageUrl,
-                    location,
-                    phone,
-                    whatsapp
-                )
+                HirerDetailScreen(name, location, phone, whatsapp)
             }
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HirerDetailScreen(
     name: String,
-    imageUrl: String,
     location: String,
     phone: String,
     whatsapp: String
 ) {
-
     val context = LocalContext.current
+    val activity = context as? android.app.Activity
 
-    Column(
-
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(
-                        MaterialTheme.colorScheme.primaryContainer,
-                        MaterialTheme.colorScheme.background
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(name.ifBlank { stringResource(R.string.app_name) }) },
+                navigationIcon = {
+                    IconButton(onClick = { activity?.finish() }) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.action_back)
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = androidx.compose.ui.graphics.Color.Transparent)
+            )
+        },
+        containerColor = androidx.compose.ui.graphics.Color.Transparent
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
+                            MaterialTheme.colorScheme.background
+                        )
                     )
                 )
-            )
-            .padding(20.dp),
-
-        horizontalAlignment =
-            Alignment.CenterHorizontally
-    ) {
-
-        Image(
-            painter =
-                rememberAsyncImagePainter(
-                    imageUrl
-                ),
-
-            contentDescription = null,
-
-            modifier = Modifier
-                .size(180.dp)
-                .clip(CircleShape),
-
-            contentScale = ContentScale.Crop
-        )
-
-        Spacer(
-            modifier = Modifier.height(20.dp)
-        )
-
-        Text(
-            text = name,
-
-            style = MaterialTheme
-                .typography
-                .headlineMedium
-        )
-
-        Spacer(
-            modifier = Modifier.height(20.dp)
-        )
-
-        ElevatedCard(
-
-            shape = RoundedCornerShape(20.dp),
-
-            modifier = Modifier.fillMaxWidth()
+                .padding(padding)
+                .padding(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
-            Column(
-                modifier = Modifier.padding(20.dp)
+            Surface(
+                modifier = Modifier.size(160.dp),
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primary,
+                shadowElevation = 6.dp
             ) {
-
-                Text(
-                    text =
-                        "📍 $location"
-                )
-
-                Spacer(
-                    modifier = Modifier.height(12.dp)
-                )
-
-                Text(
-                    text =
-                        "📞 $phone"
-                )
-            }
-        }
-
-        Spacer(
-            modifier = Modifier.height(24.dp)
-        )
-
-        Row(
-
-            modifier = Modifier.fillMaxWidth(),
-
-            horizontalArrangement =
-                Arrangement.spacedBy(12.dp)
-        ) {
-
-            Button(
-
-                onClick = {
-
-                    val intent =
-                        Intent(
-                            Intent.ACTION_DIAL
-                        )
-
-                    intent.data =
-                        Uri.parse("tel:$phone")
-
-                    context.startActivity(intent)
-                },
-
-                modifier = Modifier.weight(1f)
-            ) {
-
-                Text("Call")
+                Box(contentAlignment = Alignment.Center) {
+                    Text(
+                        text = name.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
+                        fontSize = 64.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
             }
 
-            Button(
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(name, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(20.dp))
 
-                onClick = {
+            ElevatedCard(shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(20.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.LocationOn, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(location.ifBlank { "—" }, style = MaterialTheme.typography.bodyLarge)
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Phone, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(phone.ifBlank { "—" }, style = MaterialTheme.typography.bodyLarge)
+                    }
+                }
+            }
 
-                    val url =
-                        "https://wa.me/$whatsapp"
+            Spacer(modifier = Modifier.height(24.dp))
 
-                    val intent =
-                        Intent(
-                            Intent.ACTION_VIEW,
-                            Uri.parse(url)
-                        )
-
-                    context.startActivity(intent)
-                },
-
-                modifier = Modifier.weight(1f)
-            ) {
-
-                Text("WhatsApp")
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                FilledTonalButton(
+                    onClick = { context.dialPhone(phone) },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(Icons.Default.Phone, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(stringResource(R.string.action_call))
+                }
+                Button(
+                    onClick = { context.openWhatsApp(whatsapp) },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(containerColor = WhatsAppGreen)
+                ) {
+                    Icon(Icons.AutoMirrored.Filled.Chat, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(stringResource(R.string.action_whatsapp))
+                }
             }
         }
     }

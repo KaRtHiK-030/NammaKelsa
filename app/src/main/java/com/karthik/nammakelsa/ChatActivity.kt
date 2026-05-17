@@ -10,15 +10,12 @@ class ChatActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val receiverId =
-            intent.getStringExtra("receiverId")
-                ?: ""
+        val receiverId   = intent.getStringExtra("receiverId") ?: ""
+        val receiverName = intent.getStringExtra("receiverName") ?: ""
 
         setContent {
-
             NammaKelsaTheme {
-
-                ChatScreen(receiverId)
+                ChatScreen(receiverId = receiverId, receiverName = receiverName)
             }
         }
     }

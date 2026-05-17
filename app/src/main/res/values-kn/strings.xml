@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ನಮ್ಮ ಕೆಲಸ</string>
+    <string name="app_tagline">ಸಂಪರ್ಕ • ಕೆಲಸ • ಬೆಳವಣಿಗೆ</string>
+
+    <string name="role_select_title">ನಿಮ್ಮ ಪಾತ್ರವನ್ನು ಆಯ್ಕೆಮಾಡಿ</string>
+    <string name="role_worker_title">ನಾನು ಕಾರ್ಮಿಕ</string>
+    <string name="role_worker_subtitle">ಕೆಲಸದ ಅವಕಾಶಗಳನ್ನು ಹುಡುಕುತ್ತಿದ್ದೇನೆ</string>
+    <string name="role_hirer_title">ನಾನು ನೇಮಕ ಮಾಡುತ್ತಿದ್ದೇನೆ</string>
+    <string name="role_hirer_subtitle">ಕುಶಲ ವೃತ್ತಿಪರರನ್ನು ಹುಡುಕಿ</string>
+
+    <string name="action_login">ಲಾಗಿನ್</string>
+    <string name="action_register">ನೋಂದಾಯಿಸಿ</string>
+    <string name="action_save">ಉಳಿಸು</string>
+    <string name="action_save_changes">ಬದಲಾವಣೆಗಳನ್ನು ಉಳಿಸಿ</string>
+    <string name="action_cancel">ರದ್ದು</string>
+    <string name="action_delete">ಅಳಿಸಿ</string>
+    <string name="action_edit">ಸಂಪಾದಿಸಿ</string>
+    <string name="action_back">ಹಿಂದೆ</string>
+    <string name="action_call">ಕರೆ</string>
+    <string name="action_chat">ಚಾಟ್</string>
+    <string name="action_whatsapp">ವಾಟ್ಸ್‌ಆ್ಯಪ್</string>
+    <string name="action_send">ಕಳುಹಿಸು</string>
+    <string name="action_logout">ಲಾಗ್‌ಔಟ್</string>
+    <string name="action_remove">ತೆಗೆದುಹಾಕಿ</string>
+    <string name="action_apply">ಅನ್ವಯಿಸಿ</string>
+    <string name="action_clear">ತೆರವುಗೊಳಿಸು</string>
+    <string name="action_filter">ಫಿಲ್ಟರ್</string>
+
+    <string name="auth_email">ಇಮೇಲ್ ವಿಳಾಸ</string>
+    <string name="auth_password">ಪಾಸ್‌ವರ್ಡ್</string>
+    <string name="auth_confirm_password">ಪಾಸ್‌ವರ್ಡ್ ದೃಢೀಕರಿಸಿ</string>
+    <string name="auth_forgot_password">ಪಾಸ್‌ವರ್ಡ್ ಮರೆತಿದ್ದೀರಾ?</string>
+
+    <string name="title_available_workers">ಲಭ್ಯವಿರುವ ಕಾರ್ಮಿಕರು</string>
+    <string name="search_workers_hint">ಹೆಸರು, ಕೌಶಲ್ಯ ಅಥವಾ ಸ್ಥಳದಿಂದ ಹುಡುಕಿ</string>
+    <string name="title_saved_workers">ಉಳಿಸಿದ ಕಾರ್ಮಿಕರು</string>
+    <string name="title_chats">ಚಾಟ್‌ಗಳು</string>
+    <string name="title_chat">ಚಾಟ್</string>
+    <string name="title_work_requests">ಕೆಲಸದ ಕೋರಿಕೆಗಳು</string>
+    <string name="title_my_requests">ನನ್ನ ಕೋರಿಕೆಗಳು</string>
+    <string name="title_send_work_request">ಕೆಲಸದ ಕೋರಿಕೆ ಕಳುಹಿಸಿ</string>
+    <string name="title_rate_worker">ಕಾರ್ಮಿಕರಿಗೆ ರೇಟ್ ಕೊಡಿ</string>
+    <string name="hint_work_details">ಕೆಲಸದ ವಿವರಗಳು</string>
+
+    <string name="empty_chats">ಯಾವುದೇ ಚಾಟ್ ಇಲ್ಲ</string>
+    <string name="empty_workers">ಕಾರ್ಮಿಕರು ಸಿಕ್ಕಿಲ್ಲ</string>
+</resources>

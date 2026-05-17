@@ -1,4 +1,4 @@
-﻿package com.karthik.nammakelsa
+package com.karthik.nammakelsa
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity

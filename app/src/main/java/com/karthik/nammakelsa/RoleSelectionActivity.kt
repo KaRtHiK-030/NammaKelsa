@@ -9,6 +9,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BusinessCenter
+import androidx.compose.material.icons.filled.Engineering
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -16,7 +19,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.karthik.nammakelsa.ui.theme.NammaKelsaTheme
 
@@ -24,11 +30,8 @@ class RoleSelectionActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         setContent {
-
             NammaKelsaTheme {
-
                 RoleSelectionScreen()
             }
         }
@@ -38,8 +41,7 @@ class RoleSelectionActivity : ComponentActivity() {
 @Composable
 fun RoleSelectionScreen() {
 
-    val context =
-        androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
 
     Column(
         modifier = Modifier
@@ -47,206 +49,138 @@ fun RoleSelectionScreen() {
             .background(
                 Brush.verticalGradient(
                     listOf(
-                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
-                        MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.2f),
+                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
+                        MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.25f),
                         MaterialTheme.colorScheme.background
                     )
                 )
             )
             .padding(24.dp),
-
         verticalArrangement = Arrangement.Center,
-
-        horizontalAlignment =
-            Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
 
-        // LOGO CARD WITH ENHANCED SHADOW
+        // Logo
         Card(
             shape = CircleShape,
-
-            elevation = CardDefaults.cardElevation(
-                defaultElevation = 12.dp
-            ),
-            
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface
-            )
+            elevation = CardDefaults.cardElevation(defaultElevation = 12.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
-
             Image(
-                painter = painterResource(
-                    id = R.drawable.logo
-                ),
-
-                contentDescription = null,
-
+                painter = painterResource(id = R.drawable.logo),
+                contentDescription = stringResource(id = R.string.app_name),
                 modifier = Modifier
                     .size(160.dp)
                     .padding(16.dp)
                     .clip(CircleShape),
-
                 contentScale = ContentScale.Crop
             )
         }
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // APP NAME WITH ICON
         Text(
-            text = "Namma Kelsa",
-
-            style = MaterialTheme
-                .typography
-                .headlineLarge,
-                
-            color = MaterialTheme.colorScheme.primary
+            text = stringResource(id = R.string.app_name),
+            style = MaterialTheme.typography.headlineLarge,
+            color = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.Bold
         )
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // SUBTITLE
         Text(
-            text = "Connect • Work • Grow",
-
-            style = MaterialTheme
-                .typography
-                .titleMedium,
-                
+            text = stringResource(id = R.string.app_tagline),
+            style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
-        Spacer(modifier = Modifier.height(60.dp))
-        
+        Spacer(modifier = Modifier.height(48.dp))
+
         Text(
-            text = "Choose your role",
+            text = stringResource(id = R.string.role_select_title),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(bottom = 16.dp)
         )
 
-        // WORKER CARD BUTTON
-        ElevatedCard(
+        // Worker
+        RoleCard(
+            title = stringResource(id = R.string.role_worker_title),
+            subtitle = stringResource(id = R.string.role_worker_subtitle),
+            icon = Icons.Default.Engineering,
+            container = MaterialTheme.colorScheme.primaryContainer,
+            onContainer = MaterialTheme.colorScheme.onPrimaryContainer,
             onClick = {
-                val intent = Intent(
-                    context,
-                    MainActivity::class.java
-                )
-
-                intent.putExtra(
-                    "role",
-                    "worker"
-                )
-
-                context.startActivity(intent)
-            },
-
-            shape = RoundedCornerShape(24.dp),
-
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(120.dp),
-                
-            elevation = CardDefaults.elevatedCardElevation(
-                defaultElevation = 6.dp,
-                pressedElevation = 2.dp
-            ),
-            
-            colors = CardDefaults.elevatedCardColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer
-            )
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(24.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column {
-                    Text(
-                        text = "👷 I'm a Worker",
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Looking for work opportunities",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                    )
-                }
-                
-                Icon(
-                    painter = painterResource(id = R.drawable.logo),
-                    contentDescription = null,
-                    modifier = Modifier.size(48.dp),
-                    tint = MaterialTheme.colorScheme.primary
+                context.startActivity(
+                    Intent(context, MainActivity::class.java).putExtra("role", "worker")
                 )
             }
-        }
+        )
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // HIRER CARD BUTTON
-        ElevatedCard(
+        // Hirer
+        RoleCard(
+            title = stringResource(id = R.string.role_hirer_title),
+            subtitle = stringResource(id = R.string.role_hirer_subtitle),
+            icon = Icons.Default.BusinessCenter,
+            container = MaterialTheme.colorScheme.secondaryContainer,
+            onContainer = MaterialTheme.colorScheme.onSecondaryContainer,
             onClick = {
-                val intent = Intent(
-                    context,
-                    MainActivity::class.java
-                )
-
-                intent.putExtra(
-                    "role",
-                    "hirer"
-                )
-
-                context.startActivity(intent)
-            },
-
-            shape = RoundedCornerShape(24.dp),
-
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(120.dp),
-                
-            elevation = CardDefaults.elevatedCardElevation(
-                defaultElevation = 6.dp,
-                pressedElevation = 2.dp
-            ),
-            
-            colors = CardDefaults.elevatedCardColors(
-                containerColor = MaterialTheme.colorScheme.secondaryContainer
-            )
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(24.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column {
-                    Text(
-                        text = "🏢 I'm Hiring",
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Find skilled professionals",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
-                    )
-                }
-                
-                Icon(
-                    painter = painterResource(id = R.drawable.logo),
-                    contentDescription = null,
-                    modifier = Modifier.size(48.dp),
-                    tint = MaterialTheme.colorScheme.secondary
+                context.startActivity(
+                    Intent(context, MainActivity::class.java).putExtra("role", "hirer")
                 )
             }
+        )
+    }
+}
+
+@Composable
+private fun RoleCard(
+    title: String,
+    subtitle: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    container: androidx.compose.ui.graphics.Color,
+    onContainer: androidx.compose.ui.graphics.Color,
+    onClick: () -> Unit
+) {
+    ElevatedCard(
+        onClick = onClick,
+        shape = RoundedCornerShape(24.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(120.dp),
+        elevation = CardDefaults.elevatedCardElevation(
+            defaultElevation = 6.dp,
+            pressedElevation = 2.dp
+        ),
+        colors = CardDefaults.elevatedCardColors(containerColor = container)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxSize().padding(24.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = onContainer,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = onContainer.copy(alpha = 0.75f)
+                )
+            }
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(48.dp),
+                tint = onContainer
+            )
         }
     }
 }

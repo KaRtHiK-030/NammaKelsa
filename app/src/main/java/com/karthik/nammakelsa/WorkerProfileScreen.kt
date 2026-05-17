@@ -1,7 +1,6 @@
 package com.karthik.nammakelsa
 
 import android.content.Intent
-import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -10,6 +9,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Chat
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -17,377 +18,442 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.karthik.nammakelsa.ui.theme.StarYellow
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WorkerProfileScreen() {
 
     val context = LocalContext.current
-    val db      = FirebaseFirestore.getInstance()
-    val userId  = FirebaseAuth.getInstance().currentUser?.uid ?: ""
+    val db = FirebaseFirestore.getInstance()
+    val userId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
 
-    var name         by remember { mutableStateOf("") }
-    var location     by remember { mutableStateOf("") }
-    var phone        by remember { mutableStateOf("") }
-    var whatsapp     by remember { mutableStateOf("") }
-    var skillsList   by remember { mutableStateOf(listOf<Map<String, String>>()) }
+    var name by remember { mutableStateOf("") }
+    var location by remember { mutableStateOf("") }
+    var phone by remember { mutableStateOf("") }
+    var whatsapp by remember { mutableStateOf("") }
+    var skillsList by remember { mutableStateOf(listOf<Map<String, String>>()) }
     var availability by remember { mutableStateOf("Available") }
+    var avgRating by remember { mutableDoubleStateOf(0.0) }
+    var totalReviews by remember { mutableLongStateOf(0L) }
+
+    var pendingDeleteSkill by remember { mutableStateOf<Pair<Int, Map<String, String>>?>(null) }
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var showLogoutDialog by remember { mutableStateOf(false) }
+
+    val snackbar = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+
+    val msgSkillRemoved = stringResource(R.string.msg_skill_removed)
+    val msgLoggedOut    = stringResource(R.string.msg_logged_out)
+    val msgAccountDeleted = stringResource(R.string.msg_account_deleted)
+    val msgRecentLogin = stringResource(R.string.msg_recent_login_required)
 
     val listState = rememberLazyListState()
 
-    fun loadProfile() {
-        db.collection("workers").document(userId).get()
-            .addOnSuccessListener { document ->
-                name         = document.getString("name")           ?: ""
-                location     = document.getString("location")       ?: ""
-                phone        = document.getString("phoneNumber")    ?: ""
-                whatsapp     = document.getString("whatsappNumber") ?: ""
-                availability = document.getString("availability")   ?: "Available"
-                skillsList   = document.get("skillsList") as? List<Map<String, String>> ?: emptyList()
+    DisposableEffect(userId) {
+        if (userId.isBlank()) return@DisposableEffect onDispose {}
+        val reg = db.collection("workers").document(userId)
+            .addSnapshotListener { snap, _ ->
+                snap ?: return@addSnapshotListener
+                name = snap.getString("name") ?: ""
+                location = snap.getString("location") ?: ""
+                phone = snap.getString("phoneNumber") ?: ""
+                whatsapp = snap.getString("whatsappNumber") ?: ""
+                availability = snap.getString("availability") ?: "Available"
+                @Suppress("UNCHECKED_CAST")
+                skillsList = (snap.get("skillsList") as? List<Map<String, String>>) ?: emptyList()
+                avgRating = snap.getDouble("averageRating") ?: 0.0
+                totalReviews = snap.getLong("totalReviews") ?: 0L
             }
+        onDispose { reg.remove() }
     }
 
-    LaunchedEffect(Unit) { loadProfile() }
+    Scaffold(snackbarHost = { SnackbarHost(snackbar) }, containerColor = androidx.compose.ui.graphics.Color.Transparent) { padding ->
+        LazyColumn(
+            state = listState,
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+                            MaterialTheme.colorScheme.background
+                        )
+                    )
+                )
+                .padding(padding),
+            contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 220.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
 
-    // DELETE DIALOG
-    if (showDeleteDialog) {
+            item {
+                Text(stringResource(R.string.profile_my), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(20.dp))
+            }
+
+            // Identity card
+            item {
+                ElevatedCard(
+                    shape = RoundedCornerShape(24.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Box(modifier = Modifier.size(140.dp)) {
+                            Surface(modifier = Modifier.size(140.dp), shape = CircleShape, color = MaterialTheme.colorScheme.primary) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text(
+                                        text = name.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
+                                        fontSize = 56.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onPrimary,
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
+                            }
+                            Surface(
+                                modifier = Modifier.align(Alignment.BottomEnd).size(36.dp),
+                                shape = CircleShape,
+                                color = MaterialTheme.colorScheme.surface,
+                                shadowElevation = 4.dp
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = when (availability) {
+                                            "Busy"    -> Icons.Default.DoNotDisturbOn
+                                            "Offline" -> Icons.Default.PowerSettingsNew
+                                            else      -> Icons.Default.CheckCircle
+                                        },
+                                        contentDescription = availability,
+                                        tint = when (availability) {
+                                            "Busy"    -> MaterialTheme.colorScheme.error
+                                            "Offline" -> MaterialTheme.colorScheme.onSurfaceVariant
+                                            else      -> MaterialTheme.colorScheme.primary
+                                        },
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                        Text(
+                            text = when (availability) {
+                                "Busy"    -> stringResource(R.string.avail_currently_busy)
+                                "Offline" -> stringResource(R.string.avail_offline)
+                                else      -> stringResource(R.string.avail_for_work)
+                            },
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        if (totalReviews > 0L) {
+                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
+                                Icon(Icons.Default.Star, contentDescription = null, tint = StarYellow, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("%.1f (%d)".format(avgRating, totalReviews), style = MaterialTheme.typography.labelLarge)
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+                        HorizontalDivider()
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                            ContactCell(
+                                modifier = Modifier.weight(1f),
+                                icon = Icons.Default.LocationOn,
+                                value = location.ifBlank { "—" }
+                            )
+                            VerticalDivider(modifier = Modifier.height(40.dp))
+                            ContactCell(
+                                modifier = Modifier.weight(1f),
+                                icon = Icons.Default.Phone,
+                                value = phone.ifBlank { "—" }
+                            )
+                            VerticalDivider(modifier = Modifier.height(40.dp))
+                            ContactCell(
+                                modifier = Modifier.weight(1f),
+                                icon = Icons.AutoMirrored.Filled.Chat,
+                                value = whatsapp.ifBlank { "—" }
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(28.dp))
+            }
+
+            // Skills header
+            item {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Text(stringResource(R.string.profile_my_skills), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text("${skillsList.size} skills", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+
+            if (skillsList.isEmpty()) {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth().padding(32.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(Icons.Default.WorkOff, contentDescription = null, modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(stringResource(R.string.profile_no_skills_title), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(stringResource(R.string.profile_no_skills_subtitle), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+            } else {
+                itemsIndexed(skillsList) { index, item ->
+                    ElevatedCard(
+                        shape = RoundedCornerShape(18.dp),
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(20.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                                Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.size(48.dp)) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(Icons.Default.Build, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                                    }
+                                }
+                                Spacer(modifier = Modifier.width(16.dp))
+                                Column {
+                                    Text(item["skill"] ?: "", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(Icons.Default.CurrencyRupee, contentDescription = null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary)
+                                        Text("${item["charge"]}/day", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                }
+                            }
+                            IconButton(onClick = { pendingDeleteSkill = index to item }) {
+                                Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.confirm_delete_skill_title), tint = MaterialTheme.colorScheme.error)
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Action buttons
+            item {
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Button(
+                    onClick = {
+                        context.startActivity(Intent(context, ProfileActivity::class.java).putExtra("role", "worker"))
+                    },
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(stringResource(R.string.profile_edit_title), style = MaterialTheme.typography.titleMedium)
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                FilledTonalButton(
+                    onClick = { context.startActivity(Intent(context, AddSkillActivity::class.java)) },
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(stringResource(R.string.profile_add_new_skill), style = MaterialTheme.typography.titleMedium)
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                ElevatedCard(shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.padding(20.dp)) {
+                        Text(stringResource(R.string.profile_change_availability), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            FilterChip(
+                                selected = availability == "Available",
+                                onClick = {
+                                    availability = "Available"
+                                    db.collection("workers").document(userId).update("availability", "Available")
+                                },
+                                label = { Text(stringResource(R.string.avail_available)) },
+                                modifier = Modifier.weight(1f)
+                            )
+                            FilterChip(
+                                selected = availability == "Busy",
+                                onClick = {
+                                    availability = "Busy"
+                                    db.collection("workers").document(userId).update("availability", "Busy")
+                                },
+                                label = { Text(stringResource(R.string.avail_busy)) },
+                                modifier = Modifier.weight(1f)
+                            )
+                            FilterChip(
+                                selected = availability == "Offline",
+                                onClick = {
+                                    availability = "Offline"
+                                    db.collection("workers").document(userId).update("availability", "Offline")
+                                },
+                                label = { Text(stringResource(R.string.avail_offline)) },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                OutlinedButton(
+                    onClick = { showLogoutDialog = true },
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(stringResource(R.string.action_logout), style = MaterialTheme.typography.titleMedium)
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Button(
+                    onClick = { showDeleteDialog = true },
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                        contentColor   = MaterialTheme.colorScheme.onErrorContainer
+                    ),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Icon(Icons.Default.DeleteForever, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(stringResource(R.string.action_delete_account), style = MaterialTheme.typography.titleMedium)
+                }
+            }
+        }
+    }
+
+    // Confirm: remove skill
+    pendingDeleteSkill?.let { (index, item) ->
         AlertDialog(
-            onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Delete Account") },
-            text  = { Text("Are you sure you want to delete your account? This action cannot be undone.") },
+            onDismissRequest = { pendingDeleteSkill = null },
+            title = { Text(stringResource(R.string.confirm_delete_skill_title)) },
+            text  = { Text(stringResource(R.string.confirm_delete_skill_body)) },
             confirmButton = {
                 Button(
                     onClick = {
-                        val user = FirebaseAuth.getInstance().currentUser
-                        db.collection("workers").document(userId).delete()
+                        val updated = skillsList.toMutableList().also { it.removeAt(index) }
+                        db.collection("workers").document(userId).update("skillsList", updated)
                             .addOnSuccessListener {
-                                user?.delete()?.addOnSuccessListener {
-                                    Toast.makeText(context, "Account Deleted", Toast.LENGTH_LONG).show()
-                                    val intent = Intent(context, RoleSelectionActivity::class.java)
-                                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                                    context.startActivity(intent)
-                                }
+                                skillsList = updated
+                                scope.launch { snackbar.showSnackbar(msgSkillRemoved) }
                             }
+                        pendingDeleteSkill = null
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                ) { Text("Delete") }
+                ) { Text(stringResource(R.string.action_delete)) }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { pendingDeleteSkill = null }) { Text(stringResource(R.string.action_cancel)) }
             }
         )
     }
 
-    LazyColumn(
-        state = listState,
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(
-                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
-                        MaterialTheme.colorScheme.background
-                    )
-                )
-            ),
-        contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 220.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-
-        // HEADER
-        item {
-            Text(text = "My Profile", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(24.dp))
-        }
-
-        // PROFILE CARD
-        item {
-            ElevatedCard(
-                shape = RoundedCornerShape(24.dp),
-                modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp)
-            ) {
-                Column(
-                    modifier = Modifier.fillMaxWidth().padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-
-                    // ── INITIAL AVATAR ────────────────────────────────────
-                    Box(modifier = Modifier.size(140.dp)) {
-                        Surface(
-                            modifier = Modifier.size(140.dp),
-                            shape = CircleShape,
-                            color = MaterialTheme.colorScheme.primary
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Text(
-                                    text = name.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
-                                    fontSize = 56.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onPrimary,
-                                    textAlign = TextAlign.Center
-                                )
-                            }
-                        }
-
-                        // AVAILABILITY DOT
-                        Surface(
-                            modifier = Modifier
-                                .align(Alignment.BottomEnd)
-                                .size(36.dp),
-                            shape = CircleShape,
-                            color = MaterialTheme.colorScheme.surface,
-                            shadowElevation = 4.dp
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Text(
-                                    text = when (availability) {
-                                        "Busy"    -> "🔴"
-                                        "Offline" -> "⚫"
-                                        else      -> "🟢"
-                                    },
-                                    style = MaterialTheme.typography.titleMedium
-                                )
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Text(text = name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    Text(
-                        text = when (availability) {
-                            "Busy"    -> "Currently Busy"
-                            "Offline" -> "Offline"
-                            else      -> "Available for Work"
-                        },
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    Spacer(modifier = Modifier.height(20.dp))
-                    HorizontalDivider()
-                    Spacer(modifier = Modifier.height(20.dp))
-
-                    // CONTACT INFO GRID
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
-                            Icon(imageVector = Icons.Default.LocationOn, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = location.ifBlank { "—" },
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center
-                            )
-                        }
-                        VerticalDivider(modifier = Modifier.height(40.dp))
-                        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
-                            Icon(imageVector = Icons.Default.Phone, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = phone.ifBlank { "—" },
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center
-                            )
-                        }
-                        VerticalDivider(modifier = Modifier.height(40.dp))
-                        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
-                            Icon(imageVector = Icons.Default.Chat, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = whatsapp.ifBlank { "—" },
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center
-                            )
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(28.dp))
-        }
-
-        // SKILLS HEADER
-        item {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text(text = "My Skills", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                Text(text = "${skillsList.size} skills", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            Spacer(modifier = Modifier.height(16.dp))
-        }
-
-        // SKILLS LIST
-        if (skillsList.isEmpty()) {
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                ) {
-                    Column(modifier = Modifier.fillMaxWidth().padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(imageVector = Icons.Default.WorkOff, contentDescription = null, modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(text = "No skills added yet", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(text = "Add your first skill to get started", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-        } else {
-            itemsIndexed(skillsList) { index, skill ->
-                ElevatedCard(
-                    shape = RoundedCornerShape(18.dp),
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
-                    elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(20.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                            Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.size(48.dp)) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Text(text = "🛠", style = MaterialTheme.typography.titleLarge)
-                                }
-                            }
-                            Spacer(modifier = Modifier.width(16.dp))
-                            Column {
-                                Text(text = skill["skill"] ?: "", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(imageVector = Icons.Default.CurrencyRupee, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
-                                    Text(text = "${skill["charge"]}/day", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
-                            }
-                        }
-                        IconButton(
-                            onClick = {
-                                val updatedList = skillsList.toMutableList().also { it.removeAt(index) }
-                                db.collection("workers").document(userId).update("skillsList", updatedList)
-                                    .addOnSuccessListener {
-                                        skillsList = updatedList
-                                        Toast.makeText(context, "Skill removed", Toast.LENGTH_SHORT).show()
-                                    }
-                            }
-                        ) {
-                            Icon(imageVector = Icons.Default.Delete, contentDescription = "Delete skill", tint = MaterialTheme.colorScheme.error)
-                        }
-                    }
-                }
-            }
-        }
-
-        // ACTION BUTTONS
-        item {
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Button(
-                onClick = {
-                    val intent = Intent(context, ProfileActivity::class.java)
-                    intent.putExtra("role", "worker")
-                    context.startActivity(intent)
-                },
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Icon(imageVector = Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(20.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Edit Profile", style = MaterialTheme.typography.titleMedium)
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            FilledTonalButton(
-                onClick = {
-                    val intent = Intent(context, AddSkillActivity::class.java)
-                    context.startActivity(intent)
-                },
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(20.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Add New Skill", style = MaterialTheme.typography.titleMedium)
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // AVAILABILITY CHIPS
-            ElevatedCard(shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(20.dp)) {
-                    Text(text = "Change Availability", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        FilterChip(
-                            selected = availability == "Available",
-                            onClick  = { availability = "Available"; db.collection("workers").document(userId).update("availability", "Available") },
-                            label    = { Text("🟢 Available") },
-                            modifier = Modifier.weight(1f)
-                        )
-                        FilterChip(
-                            selected = availability == "Busy",
-                            onClick  = { availability = "Busy"; db.collection("workers").document(userId).update("availability", "Busy") },
-                            label    = { Text("🔴 Busy") },
-                            modifier = Modifier.weight(1f)
-                        )
-                        FilterChip(
-                            selected = availability == "Offline",
-                            onClick  = { availability = "Offline"; db.collection("workers").document(userId).update("availability", "Offline") },
-                            label    = { Text("⚫ Offline") },
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            OutlinedButton(
-                onClick = {
+    if (showLogoutDialog) {
+        AlertDialog(
+            onDismissRequest = { showLogoutDialog = false },
+            title = { Text(stringResource(R.string.confirm_logout_title)) },
+            text  = { Text(stringResource(R.string.confirm_logout_body)) },
+            confirmButton = {
+                Button(onClick = {
+                    showLogoutDialog = false
                     FirebaseAuth.getInstance().signOut()
                     val intent = Intent(context, RoleSelectionActivity::class.java)
                     intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                     context.startActivity(intent)
-                    Toast.makeText(context, "Logged out successfully", Toast.LENGTH_SHORT).show()
-                },
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Icon(imageVector = Icons.Default.Logout, contentDescription = null, modifier = Modifier.size(20.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Logout", style = MaterialTheme.typography.titleMedium)
+                    scope.launch { snackbar.showSnackbar(msgLoggedOut) }
+                }) { Text(stringResource(R.string.action_logout)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLogoutDialog = false }) { Text(stringResource(R.string.action_cancel)) }
             }
+        )
+    }
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Button(
-                onClick = { showDeleteDialog = true },
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.errorContainer,
-                    contentColor   = MaterialTheme.colorScheme.onErrorContainer
-                ),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Icon(imageVector = Icons.Default.DeleteForever, contentDescription = null, modifier = Modifier.size(20.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Delete Account", style = MaterialTheme.typography.titleMedium)
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text(stringResource(R.string.confirm_delete_account_title)) },
+            text  = { Text(stringResource(R.string.confirm_delete_account_body)) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDeleteDialog = false
+                        deleteCurrentAccount(
+                            role = "worker",
+                            onSuccess = {
+                                scope.launch { snackbar.showSnackbar(msgAccountDeleted) }
+                                val intent = Intent(context, RoleSelectionActivity::class.java)
+                                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                                context.startActivity(intent)
+                            },
+                            onError = { code ->
+                                if (code == "RECENT_LOGIN_REQUIRED") {
+                                    FirebaseAuth.getInstance().signOut()
+                                    scope.launch { snackbar.showSnackbar(msgRecentLogin) }
+                                    val intent = Intent(context, RoleSelectionActivity::class.java)
+                                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                                    context.startActivity(intent)
+                                } else {
+                                    scope.launch { snackbar.showSnackbar(code) }
+                                }
+                            }
+                        )
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) { Text(stringResource(R.string.action_delete)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) { Text(stringResource(R.string.action_cancel)) }
             }
+        )
+    }
+}
 
-            Spacer(modifier = Modifier.height(20.dp))
-        }
+@Composable
+private fun ContactCell(
+    modifier: Modifier = Modifier,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    value: String
+) {
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            maxLines = 1
+        )
     }
 }

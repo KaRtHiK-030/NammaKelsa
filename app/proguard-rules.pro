@@ -1,21 +1,25 @@
 # Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+# https://developer.android.com/build/shrink-code
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# Keep our Firestore data classes so deserialization works in release builds.
+-keep class com.karthik.nammakelsa.Worker { *; }
+-keep class com.karthik.nammakelsa.Request { *; }
+-keep class com.karthik.nammakelsa.Review { *; }
+-keep class com.karthik.nammakelsa.Message { *; }
+-keep class com.karthik.nammakelsa.Favorite { *; }
+-keep class com.karthik.nammakelsa.ChatUser { *; }
+-keep class com.karthik.nammakelsa.RequestStatus { *; }
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# Firebase Firestore reflective access
+-keepclassmembers class * {
+    @com.google.firebase.firestore.PropertyName <fields>;
+    @com.google.firebase.firestore.PropertyName <methods>;
+}
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# Keep no-arg constructors required by Firestore POJO mapping.
+-keepclasseswithmembers class * {
+    public <init>();
+}
+
+# Keep Coil + Compose (default rules suffice; safety net):
+-dontwarn coil.**
