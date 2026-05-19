@@ -10,15 +10,18 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.SetOptions
 import com.karthik.nammakelsa.ui.theme.NammaKelsaTheme
 
 class AddSkillActivity : ComponentActivity() {
@@ -27,145 +30,272 @@ class AddSkillActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-
             NammaKelsaTheme {
-
                 AddSkillScreen()
             }
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddSkillScreen() {
 
-    val context =
-        androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
+    val activity = context as? ComponentActivity
 
-    var skill by remember {
-        mutableStateOf("")
+    val auth = FirebaseAuth.getInstance()
+    val firestore = FirebaseFirestore.getInstance()
+    val currentUser = auth.currentUser
+
+    if (currentUser == null) {
+        LaunchedEffect(Unit) {
+            Toast.makeText(
+                context,
+                "Please login first",
+                Toast.LENGTH_LONG
+            ).show()
+            activity?.finish()
+        }
+        return
     }
 
-    var charge by remember {
-        mutableStateOf("")
+    val userId = currentUser.uid
+
+    var skill by remember { mutableStateOf("") }
+    var charge by remember { mutableStateOf("") }
+    var isSaving by remember { mutableStateOf(false) }
+    var roleChecked by remember { mutableStateOf(false) }
+    var isWorker by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        firestore.collection("users")
+            .document(userId)
+            .get()
+            .addOnSuccessListener { doc ->
+                isWorker = doc.getString("role") == "worker"
+                roleChecked = true
+
+                if (!isWorker) {
+                    Toast.makeText(
+                        context,
+                        "Only workers can add skills",
+                        Toast.LENGTH_LONG
+                    ).show()
+                    activity?.finish()
+                }
+            }
+            .addOnFailureListener {
+                roleChecked = true
+                Toast.makeText(
+                    context,
+                    "Failed to verify user role",
+                    Toast.LENGTH_LONG
+                ).show()
+                activity?.finish()
+            }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(
-                        MaterialTheme.colorScheme.primaryContainer,
-                        MaterialTheme.colorScheme.background
-                    )
-                )
+    if (!roleChecked) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(screenBgBrush()),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator()
+        }
+        return
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text("Add New Skill")
+                },
+                navigationIcon = {
+                    IconButton(
+                        onClick = {
+                            activity?.finish()
+                        }
+                    ) {
+                        Icon(
+                            Icons.Default.ArrowBack,
+                            contentDescription = null
+                        )
+                    }
+                }
             )
-            .verticalScroll(rememberScrollState())
-            .padding(20.dp)
-    ) {
+        }
+    ) { padding ->
 
-        Text(
-            text = "Add New Skill",
-
-            style = MaterialTheme
-                .typography
-                .headlineMedium
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        ElevatedCard(
-            shape = RoundedCornerShape(20.dp),
-
-            modifier = Modifier.fillMaxWidth()
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(screenBgBrush())
+                .verticalScroll(rememberScrollState())
+                .padding(padding)
+                .padding(20.dp)
         ) {
 
-            Column(
-                modifier = Modifier.padding(20.dp)
+            ElevatedCard(
+                shape = RoundedCornerShape(20.dp),
+                modifier = Modifier.fillMaxWidth()
             ) {
 
-                // SKILL FIELD
-                OutlinedTextField(
-                    value = skill,
-
-                    onValueChange = {
-                        skill = it
-                    },
-
-                    label = {
-                        Text("Skill")
-                    },
-
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // CHARGE FIELD
-                OutlinedTextField(
-                    value = charge,
-
-                    onValueChange = {
-                        charge = it
-                    },
-
-                    label = {
-                        Text("Charge Per Day")
-                    },
-
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Number
-                    ),
-
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // SAVE BUTTON
-                Button(
-                    onClick = {
-
-                        val userId =
-                            FirebaseAuth
-                                .getInstance()
-                                .currentUser
-                                ?.uid ?: ""
-
-                        val skillData = mapOf(
-                            "skill" to skill,
-                            "charge" to charge
-                        )
-
-                        FirebaseFirestore
-                            .getInstance()
-                            .collection("workers")
-                            .document(userId)
-
-                            .update(
-                                "skillsList",
-                                FieldValue.arrayUnion(skillData)
-                            )
-
-                            .addOnSuccessListener {
-
-                                Toast.makeText(
-                                    context,
-                                    "Skill Added ✅",
-                                    Toast.LENGTH_LONG
-                                ).show()
-
-                                // AUTO CLOSE
-                                (context as? ComponentActivity)
-                                    ?.finish()
-                            }
-                    },
-
-                    modifier = Modifier.fillMaxWidth()
+                Column(
+                    modifier = Modifier.padding(20.dp)
                 ) {
 
-                    Text("Save Skill")
+                    OutlinedTextField(
+                        value = skill,
+                        onValueChange = {
+                            skill = it
+                        },
+                        label = {
+                            Text("Skill")
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    OutlinedTextField(
+                        value = charge,
+                        onValueChange = {
+                            charge = it.filter { char ->
+                                char.isDigit()
+                            }
+                        },
+                        label = {
+                            Text("Charge Per Day")
+                        },
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Number
+                        ),
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    Button(
+                        onClick = {
+
+                            if (skill.trim().isBlank()) {
+                                Toast.makeText(
+                                    context,
+                                    "Enter a skill",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                                return@Button
+                            }
+
+                            if (charge.trim().isBlank()) {
+                                Toast.makeText(
+                                    context,
+                                    "Enter charge amount",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                                return@Button
+                            }
+
+                            isSaving = true
+
+                            firestore.collection("workers")
+                                .document(userId)
+                                .get()
+                                .addOnSuccessListener { doc ->
+
+                                    val rawSkills =
+                                        doc.get("skillsList") as? List<*>
+
+                                    val existingSkills =
+                                        rawSkills?.mapNotNull { item ->
+                                            item as? Map<String, String>
+                                        } ?: emptyList()
+
+                                    val duplicate =
+                                        existingSkills.any {
+                                            it["skill"]
+                                                ?.equals(
+                                                    skill.trim(),
+                                                    ignoreCase = true
+                                                ) == true
+                                        }
+
+                                    if (duplicate) {
+                                        isSaving = false
+
+                                        Toast.makeText(
+                                            context,
+                                            "Skill already exists",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+
+                                        return@addOnSuccessListener
+                                    }
+
+                                    val updatedSkills =
+                                        existingSkills + mapOf(
+                                            "skill" to skill.trim(),
+                                            "charge" to charge.trim()
+                                        )
+
+                                    firestore.collection("workers")
+                                        .document(userId)
+                                        .set(
+                                            mapOf(
+                                                "skillsList" to updatedSkills
+                                            ),
+                                            SetOptions.merge()
+                                        )
+                                        .addOnSuccessListener {
+                                            isSaving = false
+
+                                            Toast.makeText(
+                                                context,
+                                                "Skill Added Successfully ✅",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+
+                                            activity?.finish()
+                                        }
+                                        .addOnFailureListener {
+                                            isSaving = false
+
+                                            Toast.makeText(
+                                                context,
+                                                "Failed to save skill",
+                                                Toast.LENGTH_LONG
+                                            ).show()
+                                        }
+                                }
+                                .addOnFailureListener {
+                                    isSaving = false
+
+                                    Toast.makeText(
+                                        context,
+                                        "Failed to load existing skills",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !isSaving
+                    ) {
+
+                        if (isSaving) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Text("Save Skill")
+                        }
+                    }
                 }
             }
         }

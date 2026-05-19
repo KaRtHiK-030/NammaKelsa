@@ -1,292 +1,214 @@
 package com.karthik.nammakelsa
 
 import android.content.Intent
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import coil.compose.rememberAsyncImagePainter
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
+
+data class ChatPreview(
+    val userId: String = "",
+    val name: String = "",
+    val lastMessage: String = "",
+    val lastMessageTime: Long = 0L
+)
 
 @Composable
 fun ChatListScreen() {
 
     val context = LocalContext.current
+    val db = FirebaseFirestore.getInstance()
+    val currentUser =
+        FirebaseAuth.getInstance().currentUser ?: return
 
-    val currentUserId =
-        FirebaseAuth
-            .getInstance()
-            .currentUser
-            ?.uid ?: ""
+    val currentUserId = currentUser.uid
 
-    var chatUsers by remember {
-        mutableStateOf(listOf<ChatUser>())
+    var chats by remember {
+        mutableStateOf<List<ChatPreview>>(emptyList())
     }
 
-    // REALTIME CHAT LISTENER
-    LaunchedEffect(Unit) {
+    var isLoading by remember {
+        mutableStateOf(true)
+    }
 
-        FirebaseFirestore
-            .getInstance()
-            .collection("chats")
+    DisposableEffect(Unit) {
 
-            .addSnapshotListener { chats, _ ->
+        val listener: ListenerRegistration =
+            db.collection("chats")
+                .whereArrayContains(
+                    "participants",
+                    currentUserId
+                )
+                .addSnapshotListener { snap, _ ->
 
-                if (chats != null) {
+                    if (snap == null) {
+                        isLoading = false
+                        return@addSnapshotListener
+                    }
 
-                    val users =
-                        mutableListOf<ChatUser>()
+                    if (snap.documents.isEmpty()) {
+                        chats = emptyList()
+                        isLoading = false
+                        return@addSnapshotListener
+                    }
 
-                    chats.documents.forEach { chatDoc ->
+                    val tempChats =
+                        mutableStateListOf<ChatPreview>()
 
-                        val ids =
-                            chatDoc.id.split("_")
+                    snap.documents.forEach { chatDoc ->
 
-                        // CHECK IF CURRENT USER IS PART OF CHAT
-                        if (ids.contains(currentUserId)) {
+                        val participants =
+                            chatDoc.get("participants")
+                                    as? List<String>
+                                ?: emptyList()
 
-                            val otherUserId =
+                        val otherUserId =
+                            participants.firstOrNull {
+                                it != currentUserId
+                            } ?: return@forEach
 
-                                ids.first {
-                                    it != currentUserId
+                        fun addChat(name: String) {
+                            val preview =
+                                ChatPreview(
+                                    userId = otherUserId,
+                                    name = name,
+                                    lastMessage =
+                                        chatDoc.getString("lastMessage")
+                                            ?: "",
+                                    lastMessageTime =
+                                        chatDoc.getLong("lastMessageTime")
+                                            ?: 0L
+                                )
+
+                            tempChats.removeAll {
+                                it.userId == otherUserId
+                            }
+
+                            tempChats.add(preview)
+
+                            chats =
+                                tempChats.sortedByDescending {
+                                    it.lastMessageTime
                                 }
 
-                            // SEARCH WORKERS
-                            FirebaseFirestore
-                                .getInstance()
-                                .collection("workers")
-                                .document(otherUserId)
-                                .get()
-
-                                .addOnSuccessListener { workerDoc ->
-
-                                    if (workerDoc.exists()) {
-
-                                        val user =
-                                            ChatUser(
-
-                                                userId =
-                                                    otherUserId,
-
-                                                name =
-                                                    workerDoc.getString("name")
-                                                        ?: "",
-
-                                                imageUrl =
-                                                    workerDoc.getString("imageUrl")
-                                                        ?: "",
-
-                                                online =
-                                                    workerDoc.getBoolean("online")
-                                                        ?: false
-                                            )
-
-                                        users.add(user)
-
-                                        chatUsers =
-                                            users.distinctBy {
-                                                it.userId
-                                            }
-                                    }
-
-                                    else {
-
-                                        // SEARCH HIRERS
-                                        FirebaseFirestore
-                                            .getInstance()
-                                            .collection("hirers")
-                                            .document(otherUserId)
-                                            .get()
-
-                                            .addOnSuccessListener { hirerDoc ->
-
-                                                if (hirerDoc.exists()) {
-
-                                                    val user =
-                                                        ChatUser(
-
-                                                            userId =
-                                                                otherUserId,
-
-                                                            name =
-                                                                hirerDoc.getString("name")
-                                                                    ?: "",
-
-                                                            imageUrl =
-                                                                hirerDoc.getString("imageUrl")
-                                                                    ?: "",
-
-                                                            online =
-                                                                hirerDoc.getBoolean("online")
-                                                                    ?: false
-                                                        )
-
-                                                    users.add(user)
-
-                                                    chatUsers =
-                                                        users.distinctBy {
-                                                            it.userId
-                                                        }
-                                                }
-                                            }
-                                    }
-                                }
+                            isLoading = false
                         }
+
+                        db.collection("workers")
+                            .document(otherUserId)
+                            .get()
+                            .addOnSuccessListener { workerDoc ->
+
+                                if (workerDoc.exists()) {
+                                    addChat(
+                                        workerDoc.getString("name")
+                                            ?: "Worker"
+                                    )
+                                } else {
+                                    db.collection("hirers")
+                                        .document(otherUserId)
+                                        .get()
+                                        .addOnSuccessListener { hirerDoc ->
+                                            addChat(
+                                                hirerDoc.getString("name")
+                                                    ?: "Hirer"
+                                            )
+                                        }
+                                }
+                            }
                     }
                 }
-            }
+
+        onDispose {
+            listener.remove()
+        }
     }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(
-                        MaterialTheme.colorScheme.primaryContainer,
-                        MaterialTheme.colorScheme.background
-                    )
-                )
-            )
+            .background(screenBgBrush())
+            .padding(16.dp)
     ) {
 
         Text(
-
             text = "Chats",
-
-            style = MaterialTheme
-                .typography
-                .headlineMedium,
-
-            modifier = Modifier.padding(20.dp)
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold
         )
 
-        // EMPTY STATE
-        if (chatUsers.isEmpty()) {
+        Spacer(modifier = Modifier.height(20.dp))
 
+        if (isLoading) {
             Box(
                 modifier = Modifier.fillMaxSize(),
-
-                contentAlignment =
-                    Alignment.Center
+                contentAlignment = Alignment.Center
             ) {
-
-                Text(
-                    text = "No chats yet"
-                )
+                CircularProgressIndicator()
             }
+            return@Column
         }
 
-        else {
-
-            LazyColumn(
-
-                contentPadding = PaddingValues(
-                    bottom = 140.dp
-                )
+        if (chats.isEmpty()) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
             ) {
+                Text("No chats yet")
+            }
+            return@Column
+        }
 
-                items(chatUsers) { user ->
+        LazyColumn(
+            verticalArrangement =
+                Arrangement.spacedBy(10.dp)
+        ) {
+            items(chats) { chat ->
 
-                    ElevatedCard(
-
-                        shape = RoundedCornerShape(20.dp),
-
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(
-                                horizontal = 16.dp,
-                                vertical = 8.dp
-                            )
-                            .clickable {
-
-                                val intent =
-                                    Intent(
-                                        context,
-                                        ChatActivity::class.java
+                ElevatedCard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            context.startActivity(
+                                Intent(
+                                    context,
+                                    ChatActivity::class.java
+                                ).apply {
+                                    putExtra(
+                                        "receiverId",
+                                        chat.userId
                                     )
-
-                                intent.putExtra(
-                                    "receiverId",
-                                    user.userId
-                                )
-
-                                context.startActivity(intent)
-                            }
+                                }
+                            )
+                        }
+                ) {
+                    Column(
+                        modifier =
+                            Modifier.padding(16.dp)
                     ) {
 
-                        Row(
+                        Text(
+                            chat.name,
+                            fontWeight = FontWeight.Bold
+                        )
 
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
+                        Spacer(
+                            modifier =
+                                Modifier.height(6.dp)
+                        )
 
-                            verticalAlignment =
-                                Alignment.CenterVertically
-                        ) {
-
-                            Image(
-                                painter =
-                                    rememberAsyncImagePainter(
-                                        user.imageUrl
-                                    ),
-
-                                contentDescription = null,
-
-                                modifier = Modifier
-                                    .size(70.dp)
-                                    .clip(CircleShape),
-
-                                contentScale =
-                                    ContentScale.Crop
-                            )
-
-                            Spacer(
-                                modifier =
-                                    Modifier.width(16.dp)
-                            )
-
-                            Column(
-                                modifier =
-                                    Modifier.weight(1f)
-                            ) {
-
-                                Text(
-                                    text = user.name,
-
-                                    style = MaterialTheme
-                                        .typography
-                                        .titleLarge
-                                )
-
-                                Spacer(
-                                    modifier =
-                                        Modifier.height(4.dp)
-                                )
-
-                                Text(
-                                    text =
-                                        if (user.online)
-                                            "🟢 Online"
-                                        else
-                                            "⚫ Offline"
-                                )
-                            }
-                        }
+                        Text(chat.lastMessage)
                     }
                 }
             }

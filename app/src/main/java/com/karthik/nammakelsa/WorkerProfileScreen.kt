@@ -1,5 +1,6 @@
 package com.karthik.nammakelsa
 
+import android.app.Activity
 import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.background
@@ -7,7 +8,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -15,379 +15,632 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.text.KeyboardOptions
+import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.SetOptions
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WorkerProfileScreen() {
 
     val context = LocalContext.current
-    val db      = FirebaseFirestore.getInstance()
-    val userId  = FirebaseAuth.getInstance().currentUser?.uid ?: ""
+    val activity = context as? Activity
+    val auth = FirebaseAuth.getInstance()
+    val db = FirebaseFirestore.getInstance()
+    val currentUser = auth.currentUser ?: return
+    val userId = currentUser.uid
 
-    var name         by remember { mutableStateOf("") }
-    var location     by remember { mutableStateOf("") }
-    var phone        by remember { mutableStateOf("") }
-    var whatsapp     by remember { mutableStateOf("") }
-    var skillsList   by remember { mutableStateOf(listOf<Map<String, String>>()) }
-    var availability by remember { mutableStateOf("Available") }
-    var showDeleteDialog by remember { mutableStateOf(false) }
+    var name by remember { mutableStateOf("") }
+    var location by remember { mutableStateOf("") }
+    var phone by remember { mutableStateOf("") }
+    var whatsapp by remember { mutableStateOf("") }
+    var skillsList by remember {
+        mutableStateOf<List<Map<String, String>>>(emptyList())
+    }
+
+    var availability by remember {
+        mutableStateOf("Available")
+    }
+
+    var isLoading by remember {
+        mutableStateOf(true)
+    }
+
+    var showDeleteDialog by remember {
+        mutableStateOf(false)
+    }
+
+    var deletePassword by remember {
+        mutableStateOf("")
+    }
+
+    var deleting by remember {
+        mutableStateOf(false)
+    }
+
+    var newSkill by remember {
+        mutableStateOf("")
+    }
+
+    var newCharge by remember {
+        mutableStateOf("")
+    }
 
     val listState = rememberLazyListState()
 
     fun loadProfile() {
-        db.collection("workers").document(userId).get()
+        db.collection("workers")
+            .document(userId)
+            .get()
             .addOnSuccessListener { document ->
-                name         = document.getString("name")           ?: ""
-                location     = document.getString("location")       ?: ""
-                phone        = document.getString("phoneNumber")    ?: ""
-                whatsapp     = document.getString("whatsappNumber") ?: ""
-                availability = document.getString("availability")   ?: "Available"
-                skillsList   = document.get("skillsList") as? List<Map<String, String>> ?: emptyList()
+
+                name = document.getString("name") ?: ""
+                location = document.getString("location") ?: ""
+                phone = document.getString("phoneNumber") ?: ""
+                whatsapp =
+                    document.getString("whatsappNumber") ?: ""
+
+                availability =
+                    document.getString("availability")
+                        ?: "Available"
+
+                val rawSkills =
+                    document.get("skillsList") as? List<*>
+
+                skillsList =
+                    rawSkills?.mapNotNull {
+                        it as? Map<String, String>
+                    } ?: emptyList()
+
+                isLoading = false
+            }
+            .addOnFailureListener {
+                isLoading = false
             }
     }
 
-    LaunchedEffect(Unit) { loadProfile() }
+    fun logout() {
+        auth.signOut()
 
-    // DELETE DIALOG
+        context.startActivity(
+            Intent(
+                context,
+                RoleSelectionActivity::class.java
+            ).apply {
+                flags =
+                    Intent.FLAG_ACTIVITY_NEW_TASK or
+                            Intent.FLAG_ACTIVITY_CLEAR_TASK
+            }
+        )
+
+        activity?.finish()
+    }
+
+    fun deleteAccount() {
+
+        if (deletePassword.isBlank()) {
+            Toast.makeText(
+                context,
+                "Enter password",
+                Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
+
+        val email = currentUser.email ?: return
+
+        deleting = true
+
+        val credential =
+            EmailAuthProvider.getCredential(
+                email,
+                deletePassword
+            )
+
+        currentUser.reauthenticate(credential)
+            .addOnSuccessListener {
+
+                db.collection("workers")
+                    .document(userId)
+                    .delete()
+
+                db.collection("presence")
+                    .document(userId)
+                    .delete()
+
+                currentUser.delete()
+                    .addOnSuccessListener {
+                        deleting = false
+                        logout()
+                    }
+            }
+            .addOnFailureListener {
+                deleting = false
+
+                Toast.makeText(
+                    context,
+                    "Wrong password",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+    }
+
+    LaunchedEffect(Unit) {
+        loadProfile()
+    }
+
     if (showDeleteDialog) {
         AlertDialog(
-            onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Delete Account") },
-            text  = { Text("Are you sure you want to delete your account? This action cannot be undone.") },
+            onDismissRequest = {
+                showDeleteDialog = false
+            },
+            title = {
+                Text("Delete Account")
+            },
+            text = {
+                Column {
+
+                    Text(
+                        "Enter password to delete account permanently."
+                    )
+
+                    Spacer(
+                        modifier = Modifier.height(16.dp)
+                    )
+
+                    OutlinedTextField(
+                        value = deletePassword,
+                        onValueChange = {
+                            deletePassword = it
+                        },
+                        visualTransformation =
+                            PasswordVisualTransformation(),
+                        label = {
+                            Text("Password")
+                        }
+                    )
+                }
+            },
             confirmButton = {
                 Button(
                     onClick = {
-                        val user = FirebaseAuth.getInstance().currentUser
-                        db.collection("workers").document(userId).delete()
-                            .addOnSuccessListener {
-                                user?.delete()?.addOnSuccessListener {
-                                    Toast.makeText(context, "Account Deleted", Toast.LENGTH_LONG).show()
-                                    val intent = Intent(context, RoleSelectionActivity::class.java)
-                                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                                    context.startActivity(intent)
-                                }
-                            }
+                        deleteAccount()
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                ) { Text("Delete") }
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor =
+                            MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    if (deleting) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp)
+                        )
+                    } else {
+                        Text("Delete")
+                    }
+                }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") }
+                TextButton(
+                    onClick = {
+                        showDeleteDialog = false
+                    }
+                ) {
+                    Text("Cancel")
+                }
             }
         )
+    }
+
+    if (isLoading) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(screenBgBrush()),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator()
+        }
+        return
     }
 
     LazyColumn(
         state = listState,
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(
-                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
-                        MaterialTheme.colorScheme.background
-                    )
-                )
-            ),
-        contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 220.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .background(screenBgBrush()),
+        contentPadding = PaddingValues(
+            start = 16.dp,
+            top = 16.dp,
+            end = 16.dp,
+            bottom = 220.dp
+        ),
+        horizontalAlignment =
+            Alignment.CenterHorizontally
     ) {
 
-        // HEADER
         item {
-            Text(text = "My Profile", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+            Text(
+                "My Profile",
+                style =
+                    MaterialTheme.typography
+                        .headlineMedium,
+                fontWeight = FontWeight.Bold
+            )
+
             Spacer(modifier = Modifier.height(24.dp))
         }
 
-        // PROFILE CARD
         item {
             ElevatedCard(
                 shape = RoundedCornerShape(24.dp),
-                modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp)
+                modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
-                    modifier = Modifier.fillMaxWidth().padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment =
+                        Alignment.CenterHorizontally
                 ) {
 
-                    // ── INITIAL AVATAR ────────────────────────────────────
-                    Box(modifier = Modifier.size(140.dp)) {
-                        Surface(
-                            modifier = Modifier.size(140.dp),
-                            shape = CircleShape,
-                            color = MaterialTheme.colorScheme.primary
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Text(
-                                    text = name.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
-                                    fontSize = 56.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onPrimary,
-                                    textAlign = TextAlign.Center
-                                )
-                            }
-                        }
-
-                        // AVAILABILITY DOT
-                        Surface(
-                            modifier = Modifier
-                                .align(Alignment.BottomEnd)
-                                .size(36.dp),
-                            shape = CircleShape,
-                            color = MaterialTheme.colorScheme.surface,
-                            shadowElevation = 4.dp
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Text(
-                                    text = when (availability) {
-                                        "Busy"    -> "🔴"
-                                        "Offline" -> "⚫"
-                                        else      -> "🟢"
-                                    },
-                                    style = MaterialTheme.typography.titleMedium
-                                )
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Text(text = name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    Text(
-                        text = when (availability) {
-                            "Busy"    -> "Currently Busy"
-                            "Offline" -> "Offline"
-                            else      -> "Available for Work"
-                        },
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    InitialAvatar(
+                        name = name,
+                        size = 140.dp
                     )
 
-                    Spacer(modifier = Modifier.height(20.dp))
-                    HorizontalDivider()
-                    Spacer(modifier = Modifier.height(20.dp))
+                    Spacer(
+                        modifier = Modifier.height(16.dp)
+                    )
 
-                    // CONTACT INFO GRID
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
-                            Icon(imageVector = Icons.Default.LocationOn, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = location.ifBlank { "—" },
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center
-                            )
-                        }
-                        VerticalDivider(modifier = Modifier.height(40.dp))
-                        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
-                            Icon(imageVector = Icons.Default.Phone, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = phone.ifBlank { "—" },
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center
-                            )
-                        }
-                        VerticalDivider(modifier = Modifier.height(40.dp))
-                        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
-                            Icon(imageVector = Icons.Default.Chat, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = whatsapp.ifBlank { "—" },
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center
-                            )
-                        }
-                    }
-                }
-            }
+                    Text(
+                        name.ifBlank { "Worker" },
+                        style =
+                            MaterialTheme.typography
+                                .headlineSmall,
+                        fontWeight = FontWeight.Bold
+                    )
 
-            Spacer(modifier = Modifier.height(28.dp))
-        }
+                    Spacer(
+                        modifier = Modifier.height(12.dp)
+                    )
 
-        // SKILLS HEADER
-        item {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text(text = "My Skills", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                Text(text = "${skillsList.size} skills", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            Spacer(modifier = Modifier.height(16.dp))
-        }
-
-        // SKILLS LIST
-        if (skillsList.isEmpty()) {
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                ) {
-                    Column(modifier = Modifier.fillMaxWidth().padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(imageVector = Icons.Default.WorkOff, contentDescription = null, modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(text = "No skills added yet", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(text = "Add your first skill to get started", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-        } else {
-            itemsIndexed(skillsList) { index, skill ->
-                ElevatedCard(
-                    shape = RoundedCornerShape(18.dp),
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
-                    elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
-                ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(20.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        horizontalArrangement =
+                            Arrangement.spacedBy(10.dp)
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                            Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.size(48.dp)) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Text(text = "🛠", style = MaterialTheme.typography.titleLarge)
-                                }
-                            }
-                            Spacer(modifier = Modifier.width(16.dp))
-                            Column {
-                                Text(text = skill["skill"] ?: "", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(imageVector = Icons.Default.CurrencyRupee, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
-                                    Text(text = "${skill["charge"]}/day", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
-                            }
-                        }
-                        IconButton(
+
+                        FilterChip(
+                            selected =
+                                availability == "Available",
                             onClick = {
-                                val updatedList = skillsList.toMutableList().also { it.removeAt(index) }
-                                db.collection("workers").document(userId).update("skillsList", updatedList)
-                                    .addOnSuccessListener {
-                                        skillsList = updatedList
-                                        Toast.makeText(context, "Skill removed", Toast.LENGTH_SHORT).show()
-                                    }
+                                availability = "Available"
+
+                                db.collection("workers")
+                                    .document(userId)
+                                    .set(
+                                        mapOf(
+                                            "availability" to
+                                                    "Available"
+                                        ),
+                                        SetOptions.merge()
+                                    )
+                            },
+                            label = {
+                                Text("Available")
                             }
-                        ) {
-                            Icon(imageVector = Icons.Default.Delete, contentDescription = "Delete skill", tint = MaterialTheme.colorScheme.error)
-                        }
-                    }
-                }
-            }
-        }
-
-        // ACTION BUTTONS
-        item {
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Button(
-                onClick = {
-                    val intent = Intent(context, ProfileActivity::class.java)
-                    intent.putExtra("role", "worker")
-                    context.startActivity(intent)
-                },
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Icon(imageVector = Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(20.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Edit Profile", style = MaterialTheme.typography.titleMedium)
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            FilledTonalButton(
-                onClick = {
-                    val intent = Intent(context, AddSkillActivity::class.java)
-                    context.startActivity(intent)
-                },
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(20.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Add New Skill", style = MaterialTheme.typography.titleMedium)
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // AVAILABILITY CHIPS
-            ElevatedCard(shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(20.dp)) {
-                    Text(text = "Change Availability", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        FilterChip(
-                            selected = availability == "Available",
-                            onClick  = { availability = "Available"; db.collection("workers").document(userId).update("availability", "Available") },
-                            label    = { Text("🟢 Available") },
-                            modifier = Modifier.weight(1f)
                         )
+
                         FilterChip(
-                            selected = availability == "Busy",
-                            onClick  = { availability = "Busy"; db.collection("workers").document(userId).update("availability", "Busy") },
-                            label    = { Text("🔴 Busy") },
-                            modifier = Modifier.weight(1f)
-                        )
-                        FilterChip(
-                            selected = availability == "Offline",
-                            onClick  = { availability = "Offline"; db.collection("workers").document(userId).update("availability", "Offline") },
-                            label    = { Text("⚫ Offline") },
-                            modifier = Modifier.weight(1f)
+                            selected =
+                                availability == "Busy",
+                            onClick = {
+                                availability = "Busy"
+
+                                db.collection("workers")
+                                    .document(userId)
+                                    .set(
+                                        mapOf(
+                                            "availability" to
+                                                    "Busy"
+                                        ),
+                                        SetOptions.merge()
+                                    )
+                            },
+                            label = {
+                                Text("Busy")
+                            }
                         )
                     }
+
+                    Spacer(
+                        modifier = Modifier.height(20.dp)
+                    )
+
+                    ProfileInfoRow(
+                        Icons.Default.LocationOn,
+                        "Location",
+                        location
+                    )
+
+                    Spacer(
+                        modifier = Modifier.height(12.dp)
+                    )
+
+                    ProfileInfoRow(
+                        Icons.Default.Phone,
+                        "Phone",
+                        phone
+                    )
+
+                    Spacer(
+                        modifier = Modifier.height(12.dp)
+                    )
+
+                    ProfileInfoRow(
+                        Icons.Default.Chat,
+                        "WhatsApp",
+                        whatsapp
+                    )
                 }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            OutlinedButton(
-                onClick = {
-                    FirebaseAuth.getInstance().signOut()
-                    val intent = Intent(context, RoleSelectionActivity::class.java)
-                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                    context.startActivity(intent)
-                    Toast.makeText(context, "Logged out successfully", Toast.LENGTH_SHORT).show()
-                },
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Icon(imageVector = Icons.Default.Logout, contentDescription = null, modifier = Modifier.size(20.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Logout", style = MaterialTheme.typography.titleMedium)
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Button(
-                onClick = { showDeleteDialog = true },
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.errorContainer,
-                    contentColor   = MaterialTheme.colorScheme.onErrorContainer
-                ),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Icon(imageVector = Icons.Default.DeleteForever, contentDescription = null, modifier = Modifier.size(20.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Delete Account", style = MaterialTheme.typography.titleMedium)
             }
 
             Spacer(modifier = Modifier.height(20.dp))
+        }
+
+        item {
+
+            Button(
+                onClick = {
+                    context.startActivity(
+                        Intent(
+                            context,
+                            ProfileActivity::class.java
+                        ).apply {
+                            putExtra("role", "worker")
+                        }
+                    )
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.Edit, null)
+
+                Spacer(
+                    modifier = Modifier.width(8.dp)
+                )
+
+                Text("Edit Profile")
+            }
+
+            Spacer(
+                modifier = Modifier.height(12.dp)
+            )
+
+            Button(
+                onClick = {
+                    context.startActivity(
+                        Intent(
+                            context,
+                            WorkerReviewsActivity::class.java
+                        )
+                    )
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.Star, null)
+
+                Spacer(
+                    modifier = Modifier.width(8.dp)
+                )
+
+                Text("View Reviews")
+            }
+
+            Spacer(
+                modifier = Modifier.height(20.dp)
+            )
+        }
+
+        item {
+
+            Text(
+                "Add Skill",
+                style =
+                    MaterialTheme.typography
+                        .titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(
+                modifier = Modifier.height(16.dp)
+            )
+
+            OutlinedTextField(
+                value = newSkill,
+                onValueChange = {
+                    newSkill = it
+                },
+                label = {
+                    Text("Skill")
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(
+                modifier = Modifier.height(12.dp)
+            )
+
+            OutlinedTextField(
+                value = newCharge,
+                onValueChange = {
+                    newCharge =
+                        it.filter { c ->
+                            c.isDigit()
+                        }
+                },
+                label = {
+                    Text("Daily Charge")
+                },
+                keyboardOptions = KeyboardOptions(
+                    keyboardType =
+                        KeyboardType.Number
+                ),
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(
+                modifier = Modifier.height(12.dp)
+            )
+
+            Button(
+                onClick = {
+
+                    if (
+                        newSkill.isBlank() ||
+                        newCharge.isBlank()
+                    ) {
+                        Toast.makeText(
+                            context,
+                            "Enter skill and charge",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        return@Button
+                    }
+
+                    val updated =
+                        skillsList.toMutableList()
+
+                    updated.add(
+                        mapOf(
+                            "skill" to newSkill,
+                            "charge" to newCharge
+                        )
+                    )
+
+                    db.collection("workers")
+                        .document(userId)
+                        .set(
+                            mapOf(
+                                "skillsList" to updated
+                            ),
+                            SetOptions.merge()
+                        )
+                        .addOnSuccessListener {
+                            skillsList = updated
+                            newSkill = ""
+                            newCharge = ""
+                        }
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Add Skill")
+            }
+
+            Spacer(
+                modifier = Modifier.height(20.dp)
+            )
+        }
+
+        item {
+            Text(
+                "My Skills",
+                style =
+                    MaterialTheme.typography
+                        .titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(
+                modifier = Modifier.height(16.dp)
+            )
+        }
+
+        itemsIndexed(skillsList) { index, skill ->
+
+            ElevatedCard(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(18.dp),
+                    verticalAlignment =
+                        Alignment.CenterVertically
+                ) {
+
+                    Column(
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(skill["skill"] ?: "")
+                        Text("₹${skill["charge"]}/day")
+                    }
+
+                    IconButton(
+                        onClick = {
+
+                            val updated =
+                                skillsList.toMutableList()
+
+                            updated.removeAt(index)
+
+                            db.collection("workers")
+                                .document(userId)
+                                .set(
+                                    mapOf(
+                                        "skillsList" to updated
+                                    ),
+                                    SetOptions.merge()
+                                )
+                                .addOnSuccessListener {
+                                    skillsList = updated
+                                }
+                        }
+                    ) {
+                        Icon(
+                            Icons.Default.Delete,
+                            null
+                        )
+                    }
+                }
+            }
+        }
+
+        item {
+
+            Spacer(
+                modifier = Modifier.height(20.dp)
+            )
+
+            OutlinedButton(
+                onClick = {
+                    logout()
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Logout")
+            }
+
+            Spacer(
+                modifier = Modifier.height(12.dp)
+            )
+
+            Button(
+                onClick = {
+                    showDeleteDialog = true
+                },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor =
+                        MaterialTheme.colorScheme.error
+                )
+            ) {
+                Text("Delete Account")
+            }
         }
     }
 }

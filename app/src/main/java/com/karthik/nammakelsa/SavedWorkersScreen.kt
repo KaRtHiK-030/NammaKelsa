@@ -1,309 +1,196 @@
 package com.karthik.nammakelsa
 
 import android.content.Intent
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import coil.compose.rememberAsyncImagePainter
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+
+data class SavedWorker(
+    val workerId: String = "",
+    val name: String = "",
+    val location: String = ""
+)
 
 @Composable
 fun SavedWorkersScreen() {
 
     val context = LocalContext.current
-
+    val auth = FirebaseAuth.getInstance()
     val db = FirebaseFirestore.getInstance()
+    val currentUser = auth.currentUser ?: return
+    val hirerId = currentUser.uid
 
-    val currentUserId =
-        FirebaseAuth
-            .getInstance()
-            .currentUser
-            ?.uid ?: ""
-
-    var workers by remember {
-        mutableStateOf(listOf<Worker>())
+    var savedWorkers by remember {
+        mutableStateOf<List<SavedWorker>>(emptyList())
     }
 
-    var favoriteDocs by remember {
-        mutableStateOf(listOf<String>())
-    }
-
-    // LOAD SAVED WORKERS
-    fun loadSavedWorkers() {
-
-        db.collection("favorites")
-
-            .whereEqualTo(
-                "userId",
-                currentUserId
-            )
-
-            .get()
-
-            .addOnSuccessListener { favorites ->
-
-                favoriteDocs =
-                    favorites.documents.map {
-                        it.id
-                    }
-
-                val workerIds =
-                    favorites.documents.mapNotNull {
-
-                        it.getString("workerId")
-                    }
-
-                if (workerIds.isNotEmpty()) {
-
-                    db.collection("workers")
-
-                        .whereIn(
-                            "userId",
-                            workerIds
-                        )
-
-                        .get()
-
-                        .addOnSuccessListener {
-
-                            workers =
-                                it.toObjects(
-                                    Worker::class.java
-                                )
-                        }
-
-                } else {
-
-                    workers = emptyList()
-                }
-            }
+    var isLoading by remember {
+        mutableStateOf(true)
     }
 
     LaunchedEffect(Unit) {
-        loadSavedWorkers()
+
+        db.collection("savedWorkers")
+            .whereEqualTo("hirerId", hirerId)
+            .addSnapshotListener { snap, _ ->
+
+                if (snap == null) {
+                    isLoading = false
+                    return@addSnapshotListener
+                }
+
+                if (snap.documents.isEmpty()) {
+                    savedWorkers = emptyList()
+                    isLoading = false
+                    return@addSnapshotListener
+                }
+
+                val tempList =
+                    mutableListOf<SavedWorker>()
+
+                snap.documents.forEach { doc ->
+
+                    val workerId =
+                        doc.getString("workerId") ?: ""
+
+                    db.collection("workers")
+                        .document(workerId)
+                        .get()
+                        .addOnSuccessListener { workerDoc ->
+
+                            if (workerDoc.exists()) {
+
+                                tempList.removeAll {
+                                    it.workerId == workerId
+                                }
+
+                                tempList.add(
+                                    SavedWorker(
+                                        workerId = workerId,
+                                        name =
+                                            workerDoc.getString("name")
+                                                ?: "Worker",
+                                        location =
+                                            workerDoc.getString("location")
+                                                ?: ""
+                                    )
+                                )
+
+                                savedWorkers = tempList
+                                isLoading = false
+                            }
+                        }
+                }
+            }
     }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(
-                        MaterialTheme.colorScheme.primaryContainer,
-                        MaterialTheme.colorScheme.background
-                    )
-                )
-            )
+            .background(screenBgBrush())
             .padding(16.dp)
     ) {
 
         Text(
-            text = "Saved Workers",
-
-            style = MaterialTheme
-                .typography
-                .headlineMedium
+            "Saved Workers",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold
         )
 
-        Spacer(
-            modifier = Modifier.height(20.dp)
-        )
+        Spacer(modifier = Modifier.height(20.dp))
+
+        if (isLoading) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+            return@Column
+        }
+
+        if (savedWorkers.isEmpty()) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("No saved workers")
+            }
+            return@Column
+        }
 
         LazyColumn(
-
-            modifier = Modifier.fillMaxSize(),
-
-            contentPadding = PaddingValues(
-                bottom = 160.dp
-            )
+            verticalArrangement =
+                Arrangement.spacedBy(12.dp)
         ) {
-
-            itemsIndexed(workers) { index, worker ->
+            items(savedWorkers) { worker ->
 
                 ElevatedCard(
-
-                    shape = RoundedCornerShape(20.dp),
-
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 16.dp)
-                ) {
-
-                    Column(
-
-                        modifier = Modifier
-                            .clickable {
-
-                                val intent = Intent(
+                        .clickable {
+                            context.startActivity(
+                                Intent(
                                     context,
                                     WorkerDetailActivity::class.java
-                                )
-
-                                intent.putExtra(
-                                    "workerId",
-                                    worker.userId
-                                )
-
-                                intent.putExtra(
-                                    "name",
-                                    worker.name
-                                )
-
-                                intent.putExtra(
-                                    "skill",
-                                    worker.skill
-                                )
-
-                                intent.putExtra(
-                                    "location",
-                                    worker.location
-                                )
-
-                                intent.putExtra(
-                                    "charge",
-                                    worker.chargePerDay
-                                )
-
-                                intent.putExtra(
-                                    "phone",
-                                    worker.phoneNumber
-                                )
-
-                                intent.putExtra(
-                                    "whatsapp",
-                                    worker.whatsappNumber
-                                )
-
-                                intent.putExtra(
-                                    "imageUrl",
-                                    worker.imageUrl
-                                )
-
-                                context.startActivity(intent)
-                            }
-
-                            .padding(16.dp)
+                                ).apply {
+                                    putExtra(
+                                        "workerId",
+                                        worker.workerId
+                                    )
+                                }
+                            )
+                        }
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment =
+                            Alignment.CenterVertically
                     ) {
 
-                        Row(
-
-                            verticalAlignment =
-                                Alignment.CenterVertically
+                        Column(
+                            modifier = Modifier.weight(1f)
                         ) {
-
-                            // IMAGE
-                            Image(
-                                painter =
-                                    rememberAsyncImagePainter(
-                                        worker.imageUrl
-                                    ),
-
-                                contentDescription = null,
-
-                                modifier = Modifier
-                                    .size(100.dp)
-                                    .clip(
-                                        RoundedCornerShape(16.dp)
-                                    ),
-
-                                contentScale = ContentScale.Crop
+                            Text(
+                                worker.name,
+                                fontWeight = FontWeight.Bold
                             )
 
                             Spacer(
-                                modifier = Modifier.width(16.dp)
+                                modifier = Modifier.height(6.dp)
                             )
 
-                            Column {
-
-                                Text(
-                                    text = worker.name,
-
-                                    style = MaterialTheme
-                                        .typography
-                                        .titleLarge
-                                )
-
-                                Spacer(
-                                    modifier = Modifier.height(6.dp)
-                                )
-
-                                Text(
-                                    text =
-                                        "🛠 ${worker.skill}"
-                                )
-
-                                Spacer(
-                                    modifier = Modifier.height(6.dp)
-                                )
-
-                                Text(
-                                    text =
-                                        "📍 ${worker.location}"
-                                )
-
-                                Spacer(
-                                    modifier = Modifier.height(6.dp)
-                                )
-
-                                Text(
-                                    text =
-                                        "₹ ${worker.chargePerDay}/day"
-                                )
-                            }
+                            Text(worker.location)
                         }
 
-                        Spacer(
-                            modifier = Modifier.height(14.dp)
-                        )
-
-                        // REMOVE BUTTON
-                        OutlinedButton(
-
+                        IconButton(
                             onClick = {
-
-                                if (index < favoriteDocs.size) {
-
-                                    db.collection("favorites")
-                                        .document(
-                                            favoriteDocs[index]
-                                        )
-                                        .delete()
-
-                                    loadSavedWorkers()
-                                }
-                            },
-
-                            modifier = Modifier.fillMaxWidth()
+                                db.collection("savedWorkers")
+                                    .document(
+                                        "${hirerId}_${worker.workerId}"
+                                    )
+                                    .delete()
+                            }
                         ) {
-
                             Icon(
-                                imageVector =
-                                    Icons.Default.Delete,
-
-                                contentDescription = null
+                                Icons.Default.Delete,
+                                null
                             )
-
-                            Spacer(
-                                modifier = Modifier.width(8.dp)
-                            )
-
-                            Text("Remove from Saved")
                         }
                     }
                 }

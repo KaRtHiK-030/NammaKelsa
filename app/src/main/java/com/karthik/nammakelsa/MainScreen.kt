@@ -1,95 +1,118 @@
 package com.karthik.nammakelsa
 
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Chat
-import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material3.*
+import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.filled.Work
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 
-// ── Tab definitions ────────────────────────────────────────────────────────
-
-sealed class WorkerTab(val index: Int, val label: String, val icon: ImageVector) {
-    object Home     : WorkerTab(0, "Home",     Icons.Default.Home)
-    object Requests : WorkerTab(1, "Requests", Icons.Default.Notifications)
-    object Chat     : WorkerTab(2, "Chats",    Icons.Default.Chat)
-    object Profile  : WorkerTab(3, "Profile",  Icons.Default.Person)
-
-    companion object {
-        val all = listOf(Home, Requests, Chat, Profile)
-    }
-}
-
-sealed class HirerTab(val index: Int, val label: String, val icon: ImageVector) {
-    object Home     : HirerTab(0, "Home",     Icons.Default.Home)
-    object Saved    : HirerTab(1, "Saved",    Icons.Default.Favorite)
-    object Requests : HirerTab(2, "Requests", Icons.Default.Notifications)
-    object Chat     : HirerTab(3, "Chats",    Icons.Default.Chat)
-    object Profile  : HirerTab(4, "Profile",  Icons.Default.Person)
-
-    companion object {
-        val all = listOf(Home, Saved, Requests, Chat, Profile)
-    }
-}
-
-// ── MainScreen ─────────────────────────────────────────────────────────────
+data class NavItem(
+    val title: String,
+    val icon: ImageVector
+)
 
 @Composable
-fun MainScreen(role: String) {
+fun MainScreen(
+    role: String,
+    openTab: String = "home"
+) {
 
-    var selectedTab by remember { mutableStateOf(0) }
+    val workerItems = listOf(
+        NavItem("Home", Icons.Default.Home),
+        NavItem("Requests", Icons.Default.Work),
+        NavItem("Chats", Icons.Default.Chat),
+        NavItem("Profile", Icons.Default.Person)
+    )
+
+    val hirerItems = listOf(
+        NavItem("Home", Icons.Default.Home),
+        NavItem("Saved", Icons.Default.Bookmark),
+        NavItem("Requests", Icons.Default.Send),
+        NavItem("Chats", Icons.Default.Chat),
+        NavItem("Profile", Icons.Default.Person)
+    )
+
+    val items =
+        if (role == "worker") workerItems else hirerItems
+
+    val initialIndex =
+        when {
+            role == "worker" && openTab == "requests" -> 1
+            role == "worker" && openTab == "chats" -> 2
+            role == "worker" && openTab == "profile" -> 3
+
+            role == "hirer" && openTab == "saved" -> 1
+            role == "hirer" && openTab == "requests" -> 2
+            role == "hirer" && openTab == "chats" -> 3
+            role == "hirer" && openTab == "profile" -> 4
+
+            else -> 0
+        }
+
+    var selectedIndex by rememberSaveable {
+        mutableStateOf(initialIndex)
+    }
 
     Scaffold(
         bottomBar = {
             NavigationBar {
-                if (role == "worker") {
-                    WorkerTab.all.forEach { tab ->
-                        NavigationBarItem(
-                            selected = selectedTab == tab.index,
-                            onClick  = { selectedTab = tab.index },
-                            icon     = { Icon(imageVector = tab.icon, contentDescription = null) },
-                            label    = { Text(tab.label) }
-                        )
-                    }
-                } else {
-                    HirerTab.all.forEach { tab ->
-                        NavigationBarItem(
-                            selected = selectedTab == tab.index,
-                            onClick  = { selectedTab = tab.index },
-                            icon     = { Icon(imageVector = tab.icon, contentDescription = null) },
-                            label    = { Text(tab.label) }
-                        )
-                    }
+                items.forEachIndexed { index, item ->
+                    NavigationBarItem(
+                        selected = selectedIndex == index,
+                        onClick = {
+                            selectedIndex = index
+                        },
+                        icon = {
+                            Icon(
+                                imageVector = item.icon,
+                                contentDescription = item.title
+                            )
+                        },
+                        label = {
+                            Text(item.title)
+                        }
+                    )
                 }
             }
         }
     ) { paddingValues ->
 
         Surface(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
+            modifier = Modifier.padding(paddingValues)
         ) {
-            if (role == "worker") {
-                when (selectedTab) {
-                    WorkerTab.Home.index     -> WorkerHomeScreen()
-                    WorkerTab.Requests.index -> WorkerRequestsScreen()
-                    WorkerTab.Chat.index     -> ChatListScreen()
-                    WorkerTab.Profile.index  -> WorkerProfileScreen()
+
+            when (role) {
+
+                "worker" -> {
+                    when (selectedIndex) {
+                        0 -> WorkerHomeScreen()
+                        1 -> WorkerRequestsScreen()
+                        2 -> ChatListScreen()
+                        3 -> WorkerProfileScreen()
+                    }
                 }
-            } else {
-                when (selectedTab) {
-                    HirerTab.Home.index     -> HirerHomeScreen()
-                    HirerTab.Saved.index    -> SavedWorkersScreen()
-                    HirerTab.Requests.index -> HirerRequestsScreen()
-                    HirerTab.Chat.index     -> ChatListScreen()
-                    HirerTab.Profile.index  -> HirerProfileScreen()
+
+                else -> {
+                    when (selectedIndex) {
+                        0 -> HirerHomeScreen()
+                        1 -> SavedWorkersScreen()
+                        2 -> HirerSentRequestsScreen()
+                        3 -> ChatListScreen()
+                        4 -> HirerProfileScreen()
+                    }
                 }
             }
         }

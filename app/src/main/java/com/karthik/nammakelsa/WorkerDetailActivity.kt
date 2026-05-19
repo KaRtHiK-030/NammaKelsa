@@ -3,390 +3,536 @@
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.karthik.nammakelsa.ui.theme.NammaKelsaTheme
 
 class WorkerDetailActivity : ComponentActivity() {
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         val workerId = intent.getStringExtra("workerId") ?: ""
-        val name     = intent.getStringExtra("name")     ?: ""
-        val skill    = intent.getStringExtra("skill")    ?: ""
-        val location = intent.getStringExtra("location") ?: ""
-        val charge   = intent.getStringExtra("charge")   ?: ""
-        val phone    = intent.getStringExtra("phone")    ?: ""
-        val whatsapp = intent.getStringExtra("whatsapp") ?: ""
 
         setContent {
             NammaKelsaTheme {
-                WorkerDetailScreen(workerId, name, skill, location, charge, phone, whatsapp)
+                WorkerDetailScreen(workerId)
             }
         }
     }
 }
 
 @Composable
-fun WorkerDetailScreen(
-    workerId: String,
-    name: String,
-    skill: String,
-    location: String,
-    charge: String,
-    phone: String,
-    whatsapp: String
-) {
-    val context       = LocalContext.current
-    val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
+fun WorkerDetailScreen(workerId: String) {
 
-    var isHirer     by remember { mutableStateOf(false) }
-    var rating      by remember { mutableStateOf(0f) }
-    var comment     by remember { mutableStateOf("") }
-    var workDetails by remember { mutableStateOf("") }
-    var reviews     by remember { mutableStateOf(listOf<Review>()) }
-    var averageRating by remember { mutableStateOf(0f) }
+    val context = LocalContext.current
+    val db = FirebaseFirestore.getInstance()
+    val currentUser = FirebaseAuth.getInstance().currentUser
+    val currentUserId = currentUser?.uid ?: ""
 
-    // CHECK IF CURRENT USER IS A HIRER
-    LaunchedEffect(Unit) {
-        FirebaseFirestore.getInstance()
-            .collection("hirers")
-            .document(currentUserId)
-            .get()
-            .addOnSuccessListener { isHirer = it.exists() }
+    var name by remember { mutableStateOf("") }
+    var location by remember { mutableStateOf("") }
+    var phone by remember { mutableStateOf("") }
+    var whatsapp by remember { mutableStateOf("") }
+    var availability by remember { mutableStateOf("") }
+    var workerImageUrl by remember { mutableStateOf("") }
+
+    var skills by remember {
+        mutableStateOf<List<Map<String, String>>>(emptyList())
     }
 
-    // LOAD REVIEWS
-    fun loadReviews() {
-        FirebaseFirestore.getInstance()
-            .collection("reviews")
-            .whereEqualTo("workerId", workerId)
+    var reviews by remember {
+        mutableStateOf<List<Review>>(emptyList())
+    }
+
+    var isLoading by remember {
+        mutableStateOf(true)
+    }
+
+    var isSaved by remember {
+        mutableStateOf(false)
+    }
+
+    var showRequestDialog by remember {
+        mutableStateOf(false)
+    }
+
+    var requestMessage by remember {
+        mutableStateOf("")
+    }
+
+    var editingReview by remember {
+        mutableStateOf<Review?>(null)
+    }
+
+    var editedComment by remember {
+        mutableStateOf("")
+    }
+
+    var editedRating by remember {
+        mutableFloatStateOf(0f)
+    }
+
+    LaunchedEffect(workerId) {
+        if (workerId.isBlank()) {
+            isLoading = false
+            return@LaunchedEffect
+        }
+
+        db.collection("workers")
+            .document(workerId)
             .get()
-            .addOnSuccessListener { snap ->
-                reviews = snap.toObjects(Review::class.java)
-                averageRating = if (reviews.isNotEmpty())
-                    reviews.map { it.rating }.average().toFloat() else 0f
+            .addOnSuccessListener { doc ->
+
+                name = doc.getString("name") ?: "Worker"
+                location = doc.getString("location") ?: ""
+                phone = doc.getString("phoneNumber") ?: ""
+                whatsapp = doc.getString("whatsappNumber") ?: ""
+                availability = doc.getString("availability") ?: "Available"
+                workerImageUrl = doc.getString("imageUrl") ?: ""
+
+                val rawSkills = doc.get("skillsList") as? List<*>
+                skills =
+                    rawSkills?.mapNotNull {
+                        it as? Map<String, String>
+                    } ?: emptyList()
+
+                if (currentUserId.isNotBlank()) {
+                    db.collection("savedWorkers")
+                        .document("${currentUserId}_$workerId")
+                        .get()
+                        .addOnSuccessListener {
+                            isSaved = it.exists()
+                        }
+                }
+
+                isLoading = false
             }
     }
 
-    LaunchedEffect(Unit) { loadReviews() }
+    DisposableEffect(workerId) {
+        val listener =
+            db.collection("reviews")
+                .whereEqualTo("workerId", workerId)
+                .addSnapshotListener { snap, _ ->
+                    reviews =
+                        snap?.toObjects(Review::class.java)
+                            ?: emptyList()
+                }
+
+        onDispose {
+            listener.remove()
+        }
+    }
+
+    if (editingReview != null) {
+        AlertDialog(
+            onDismissRequest = {
+                editingReview = null
+            },
+            title = {
+                Text("Edit Review")
+            },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = editedComment,
+                        onValueChange = {
+                            editedComment = it
+                        },
+                        label = {
+                            Text("Comment")
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    OutlinedTextField(
+                        value = editedRating.toString(),
+                        onValueChange = {
+                            editedRating =
+                                it.toFloatOrNull() ?: 0f
+                        },
+                        label = {
+                            Text("Rating")
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        db.collection("reviews")
+                            .document(editingReview!!.reviewId)
+                            .update(
+                                mapOf(
+                                    "comment" to editedComment,
+                                    "rating" to editedRating
+                                )
+                            )
+
+                        editingReview = null
+                    }
+                ) {
+                    Text("Update")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        editingReview = null
+                    }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (showRequestDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showRequestDialog = false
+            },
+            title = {
+                Text("Send Work Request")
+            },
+            text = {
+                OutlinedTextField(
+                    value = requestMessage,
+                    onValueChange = {
+                        requestMessage = it
+                    },
+                    label = {
+                        Text("Enter work details")
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (currentUserId.isNotBlank()) {
+                            db.collection("hirers")
+                                .document(currentUserId)
+                                .get()
+                                .addOnSuccessListener { userDoc ->
+
+                                    val requestId =
+                                        db.collection("requests")
+                                            .document()
+                                            .id
+
+                                    val primarySkill =
+                                        if (skills.isNotEmpty())
+                                            skills.first()["skill"] ?: ""
+                                        else
+                                            ""
+
+                                    val request = Request(
+                                        requestId = requestId,
+                                        workerId = workerId,
+                                        workerName = name,
+                                        workerImage = workerImageUrl,
+                                        workerSkill = primarySkill,
+                                        workerLocation = location,
+                                        workerAvailability = availability,
+                                        hirerId = currentUserId,
+                                        hirerName = userDoc.getString("name") ?: "",
+                                        hirerImage = userDoc.getString("imageUrl") ?: "",
+                                        hirerLocation = userDoc.getString("location") ?: "",
+                                        hirerPhone = userDoc.getString("phoneNumber") ?: "",
+                                        hirerWhatsapp = userDoc.getString("whatsappNumber") ?: "",
+                                        workDetails = requestMessage,
+                                        status = "Pending",
+                                        timestamp = System.currentTimeMillis()
+                                    )
+
+                                    db.collection("requests")
+                                        .document(requestId)
+                                        .set(request)
+
+                                    requestMessage = ""
+                                    showRequestDialog = false
+                                }
+                        }
+                    }
+                ) {
+                    Text("Send")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showRequestDialog = false
+                    }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (isLoading) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(screenBgBrush()),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator()
+        }
+        return
+    }
 
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(
-                        MaterialTheme.colorScheme.primaryContainer,
-                        MaterialTheme.colorScheme.background
-                    )
-                )
-            )
-            .padding(20.dp),
+            .background(screenBgBrush())
+            .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        contentPadding = PaddingValues(bottom = 140.dp)
+        contentPadding = PaddingValues(bottom = 120.dp)
     ) {
+
         item {
+            InitialAvatar(name = name, size = 140.dp)
 
-            // ── INITIAL AVATAR ─────────────────────────────────────────────
-            Surface(
-                modifier = Modifier.size(180.dp),
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.primary,
-                shadowElevation = 6.dp
+            Spacer(Modifier.height(16.dp))
+
+            Text(
+                name,
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(Modifier.height(8.dp))
+
+            Text(availability)
+
+            Spacer(Modifier.height(20.dp))
+        }
+
+        item {
+            ElevatedCard(
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Text(
-                        text = name.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
-                        fontSize = 72.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        textAlign = TextAlign.Center
-                    )
+                Column(
+                    Modifier.padding(20.dp)
+                ) {
+                    ProfileInfoRow(Icons.Default.Phone, "Phone", phone)
+                    Spacer(Modifier.height(12.dp))
+                    ProfileInfoRow(Icons.Default.Chat, "WhatsApp", whatsapp)
+                    Spacer(Modifier.height(12.dp))
+                    ProfileInfoRow(Icons.Default.Phone, "Location", location)
                 }
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(Modifier.height(20.dp))
+        }
 
-            // NAME
-            Text(text = name, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+        item {
+            Row(
+                horizontalArrangement =
+                    Arrangement.spacedBy(8.dp)
+            ) {
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // AVG RATING
-            Text(text = "⭐ ${"%.1f".format(averageRating)}/5", style = MaterialTheme.typography.titleLarge)
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // ── DETAILS CARD ───────────────────────────────────────────────
-            ElevatedCard(shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.fillMaxWidth().padding(20.dp)) {
-                    Text(text = "🛠 Skill: $skill")
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Text(text = "📍 Location: $location")
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Text(text = "₹ $charge/day")
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Text(text = "📞 $phone")
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // ── ACTION BUTTONS ─────────────────────────────────────────────
-            Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    FilledTonalButton(
-                        onClick = {
-                            val intent = Intent(Intent.ACTION_DIAL)
-                            intent.data = Uri.parse("tel:$phone")
-                            context.startActivity(intent)
-                        },
-                        modifier = Modifier.weight(1f)
-                    ) { Text("Call") }
-
-                    FilledTonalButton(
-                        onClick = {
-                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/$whatsapp")))
-                        },
-                        modifier = Modifier.weight(1f)
-                    ) { Text("WhatsApp") }
+                Button(
+                    onClick = {
+                        context.startActivity(
+                            Intent(
+                                context,
+                                ChatActivity::class.java
+                            ).apply {
+                                putExtra("receiverId", workerId)
+                            }
+                        )
+                    }
+                ) {
+                    Icon(Icons.Default.Chat, null)
+                    Spacer(Modifier.width(6.dp))
+                    Text("Chat")
                 }
 
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    FilledTonalButton(
-                        onClick = {
-                            FirebaseFirestore.getInstance().collection("favorites")
-                                .add(hashMapOf("userId" to currentUserId, "workerId" to workerId))
-                            Toast.makeText(context, "Worker Saved ❤️", Toast.LENGTH_SHORT).show()
-                        },
-                        modifier = Modifier.weight(1f)
-                    ) { Text("❤️ Save") }
-
-                    FilledTonalButton(
-                        onClick = {
-                            val intent = Intent(context, ChatActivity::class.java)
-                            intent.putExtra("receiverId", workerId)
-                            context.startActivity(intent)
-                        },
-                        modifier = Modifier.weight(1f)
-                    ) { Text("💬 Chat") }
+                Button(
+                    onClick = {
+                        if (phone.isNotBlank()) {
+                            context.startActivity(
+                                Intent(
+                                    Intent.ACTION_DIAL,
+                                    Uri.parse("tel:$phone")
+                                )
+                            )
+                        }
+                    }
+                ) {
+                    Icon(Icons.Default.Phone, null)
+                    Spacer(Modifier.width(6.dp))
+                    Text("Call")
                 }
-            }
 
-            Spacer(modifier = Modifier.height(30.dp))
-
-            // ── SEND REQUEST CARD ──────────────────────────────────────────
-            ElevatedCard(shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(20.dp)) {
-                    Text(text = "Send Work Request", style = MaterialTheme.typography.headlineSmall)
-                    Spacer(modifier = Modifier.height(16.dp))
-                    OutlinedTextField(
-                        value = workDetails,
-                        onValueChange = { workDetails = it },
-                        label = { Text("Work Details") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(modifier = Modifier.height(20.dp))
-                    Button(
-                        onClick = {
-                            FirebaseFirestore.getInstance()
-                                .collection("hirers").document(currentUserId).get()
-                                .addOnSuccessListener { hirerDoc ->
-                                    val requestId = FirebaseFirestore.getInstance().collection("requests").document().id
-                                    FirebaseFirestore.getInstance().collection("requests")
-                                        .document(requestId)
-                                        .set(hashMapOf(
-                                            "requestId"      to requestId,
-                                            "workerId"       to workerId,
-                                            "hirerId"        to currentUserId,
-                                            "hirerName"      to (hirerDoc.getString("name")          ?: ""),
-                                            "hirerImage"     to (hirerDoc.getString("imageUrl")       ?: ""),
-                                            "hirerLocation"  to (hirerDoc.getString("location")       ?: ""),
-                                            "hirerPhone"     to (hirerDoc.getString("phoneNumber")    ?: ""),
-                                            "hirerWhatsapp"  to (hirerDoc.getString("whatsappNumber") ?: ""),
-                                            "workDetails"    to workDetails,
-                                            "status"         to "Pending"
-                                        ))
-                                        .addOnSuccessListener {
-                                            Toast.makeText(context, "Request Sent ✅", Toast.LENGTH_LONG).show()
-                                            workDetails = ""
-                                        }
-                                }
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) { Text("Send Request") }
+                Button(
+                    onClick = {
+                        showRequestDialog = true
+                    }
+                ) {
+                    Icon(Icons.Default.Send, null)
+                    Spacer(Modifier.width(6.dp))
+                    Text("Request")
                 }
-            }
 
-            Spacer(modifier = Modifier.height(30.dp))
-
-            // ── REVIEW FORM — only visible to hirers ───────────────────────
-            if (isHirer) {
-                ElevatedCard(shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.padding(20.dp)) {
-                        Text(text = "Rate Worker", style = MaterialTheme.typography.headlineSmall)
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        // STAR ROW
-                        Row {
-                            for (i in 1..5) {
-                                IconButton(onClick = { rating = i.toFloat() }) {
-                                    Icon(
-                                        imageVector = if (i <= rating) Icons.Filled.Star else Icons.Outlined.StarBorder,
-                                        contentDescription = null,
-                                        tint = Color(0xFFFFC107)
+                Button(
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor =
+                            if (isSaved) Color.Red
+                            else MaterialTheme.colorScheme.primary
+                    ),
+                    onClick = {
+                        if (!isSaved) {
+                            db.collection("savedWorkers")
+                                .document("${currentUserId}_$workerId")
+                                .set(
+                                    mapOf(
+                                        "hirerId" to currentUserId,
+                                        "workerId" to workerId
                                     )
+                                )
+                            isSaved = true
+                        }
+                    }
+                ) {
+                    Icon(Icons.Default.Favorite, null)
+                    Spacer(Modifier.width(6.dp))
+                    Text(if (isSaved) "Saved" else "Save")
+                }
+            }
+
+            Spacer(Modifier.height(24.dp))
+        }
+
+        item {
+            Text(
+                "Skills",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(Modifier.height(12.dp))
+        }
+
+        items(skills) { skill ->
+            ElevatedCard(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 10.dp)
+            ) {
+                Column(
+                    Modifier.padding(16.dp)
+                ) {
+                    Text(skill["skill"] ?: "")
+                    Text("₹${skill["charge"]}/day")
+                }
+            }
+        }
+
+        item {
+            Spacer(Modifier.height(20.dp))
+
+            Text(
+                "Reviews",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(Modifier.height(12.dp))
+        }
+
+        items(reviews) { review ->
+            ElevatedCard(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 10.dp)
+            ) {
+                Column(
+                    Modifier.padding(16.dp)
+                ) {
+                    Text(
+                        review.reviewerName,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Spacer(Modifier.height(6.dp))
+
+                    Row(
+                        verticalAlignment =
+                            Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.Star, null)
+                        Spacer(Modifier.width(4.dp))
+                        Text(review.rating.toString())
+                    }
+
+                    Spacer(Modifier.height(8.dp))
+
+                    Text(review.comment)
+
+                    if (review.userId == currentUserId) {
+                        Spacer(Modifier.height(10.dp))
+
+                        Row {
+                            IconButton(
+                                onClick = {
+                                    editingReview = review
+                                    editedComment = review.comment
+                                    editedRating = review.rating
                                 }
+                            ) {
+                                Icon(Icons.Default.Edit, null)
+                            }
+
+                            IconButton(
+                                onClick = {
+                                    db.collection("reviews")
+                                        .document(review.reviewId)
+                                        .delete()
+                                }
+                            ) {
+                                Icon(Icons.Default.Delete, null)
                             }
                         }
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        OutlinedTextField(
-                            value = comment,
-                            onValueChange = { comment = it },
-                            label = { Text("Write Review") },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-
-                        Spacer(modifier = Modifier.height(20.dp))
-
-                        Button(
-                            onClick = {
-                                if (rating > 0 && comment.isNotBlank()) {
-                                    FirebaseFirestore.getInstance()
-                                        .collection("hirers").document(currentUserId).get()
-                                        .addOnSuccessListener { hirerDoc ->
-                                            val hirerName = hirerDoc.getString("name") ?: "Anonymous"
-                                            val reviewId  = FirebaseFirestore.getInstance().collection("reviews").document().id
-                                            val review    = Review(
-                                                reviewId     = reviewId,
-                                                workerId     = workerId,
-                                                userId       = currentUserId,
-                                                reviewerName = hirerName,
-                                                rating       = rating,
-                                                comment      = comment
-                                            )
-                                            FirebaseFirestore.getInstance()
-                                                .collection("reviews").document(reviewId).set(review)
-                                                .addOnSuccessListener {
-                                                    Toast.makeText(context, "Review Added ⭐", Toast.LENGTH_LONG).show()
-                                                    comment = ""; rating = 0f
-                                                    loadReviews()
-                                                }
-                                        }
-                                }
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        ) { Text("Submit Review") }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(30.dp))
-            }
-
-            // ── REVIEWS LIST ───────────────────────────────────────────────
-            ElevatedCard(shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(20.dp)) {
-                    Text(text = "Reviews (${reviews.size})", style = MaterialTheme.typography.headlineSmall)
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    if (reviews.isEmpty()) {
-                        Text(
-                            text = "No reviews yet.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
                     }
 
-                    reviews.forEach { review ->
-                        ElevatedCard(
-                            shape = RoundedCornerShape(16.dp),
-                            modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth().padding(16.dp),
-                                verticalAlignment = Alignment.Top
-                            ) {
-                                // ── REVIEWER INITIAL AVATAR ────────────────
-                                Surface(
-                                    modifier = Modifier.size(44.dp),
-                                    shape = CircleShape,
-                                    color = MaterialTheme.colorScheme.secondaryContainer
-                                ) {
-                                    Box(contentAlignment = Alignment.Center) {
-                                        Text(
-                                            text = review.reviewerName
-                                                .firstOrNull()
-                                                ?.uppercaseChar()
-                                                ?.toString() ?: "?",
-                                            fontSize = 18.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.onSecondaryContainer
-                                        )
-                                    }
-                                }
+                    if (review.reply.isNotBlank()) {
+                        Spacer(Modifier.height(8.dp))
 
-                                Spacer(modifier = Modifier.width(12.dp))
-
-                                // REVIEW CONTENT
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = review.reviewerName,
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(text = "⭐ ${"%.1f".format(review.rating)}")
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(text = review.comment, style = MaterialTheme.typography.bodyMedium)
-                                }
-
-                                // DELETE — only hirer who wrote it can see this
-                                if (isHirer && review.userId == currentUserId) {
-                                    IconButton(
-                                        onClick = {
-                                            FirebaseFirestore.getInstance()
-                                                .collection("reviews").document(review.reviewId).delete()
-                                                .addOnSuccessListener {
-                                                    Toast.makeText(context, "Review Deleted", Toast.LENGTH_SHORT).show()
-                                                    loadReviews()
-                                                }
-                                        }
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Delete,
-                                            contentDescription = "Delete review",
-                                            tint = MaterialTheme.colorScheme.error
-                                        )
-                                    }
-                                }
-                            }
+                        Card {
+                            Text(
+                                "Worker reply: ${review.reply}",
+                                modifier =
+                                    Modifier.padding(12.dp)
+                            )
                         }
                     }
                 }

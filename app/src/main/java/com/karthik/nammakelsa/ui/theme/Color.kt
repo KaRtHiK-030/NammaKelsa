@@ -2,17 +2,38 @@ package com.karthik.nammakelsa.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Modern vibrant color palette
-val Purple80 = Color(0xFFE3D5FF)
-val PurpleGrey80 = Color(0xFFD4C9E3)
-val Pink80 = Color(0xFFFFB8D2)
+// Luxury Elegant Palette
+val LuxuryPrimary = Color(0xFF6B7280)          // refined slate
+val LuxuryPrimaryDark = Color(0xFF374151)
+val LuxuryPrimaryLight = Color(0xFF9CA3AF)
 
-val Purple40 = Color(0xFF7C4DFF)
-val PurpleGrey40 = Color(0xFF6B5B7D)
-val Pink40 = Color(0xFFD84A8D)
+val LuxurySecondary = Color(0xFFC8A97E)        // champagne gold
+val LuxurySecondaryLight = Color(0xFFD8B78A)
 
-// Accent colors for status and badges
-val SuccessGreen = Color(0xFF00C853)
-val WarningOrange = Color(0xFFFF9100)
-val ErrorRed = Color(0xFFFF1744)
-val InfoBlue = Color(0xFF2979FF)
+val LuxuryAccent = Color(0xFF8B7355)
+
+val LuxuryBackground = Color(0xFFF8F5EF)       // warm ivory
+val LuxurySurface = Color(0xFFFFFFFF)
+val LuxurySurfaceSoft = Color(0xFFFCFAF7)
+
+val TextPrimary = Color(0xFF1F2937)
+val TextSecondary = Color(0xFF6B7280)
+val TextTertiary = Color(0xFF9CA3AF)
+val TextOnPrimary = Color.White
+
+val BorderLight = Color(0xFFE5E7EB)
+val BorderMedium = Color(0xFFD1D5DB)
+
+val ErrorRed = Color(0xFFDC2626)
+val SuccessGreen = Color(0xFF16A34A)
+
+val GlassWhite = Color(0xCCFFFFFF)
+val GlassWhiteSoft = Color(0xF5FFFFFF)
+val GlassBorder = Color(0x1AD1D5DB)
+val GlassBorderStrong = Color(0x33C8A97E)
+
+val BgGradientTop = Color(0xFFFFFBF5)
+val BgGradientBottom = Color(0xFFF4EEE4)
+
+val SoftPrimary = LuxuryPrimary
+val SoftPrimaryLight = LuxuryPrimaryLight

@@ -1,51 +1,37 @@
 package com.karthik.nammakelsa.ui.theme
 
-import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.material3.*
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 
-private val DarkColors = darkColorScheme(
+private val AppColors = lightColorScheme(
+    primary = LuxuryPrimary,
+    onPrimary = TextOnPrimary,
 
-    primary = androidx.compose.ui.graphics.Color(0xFF4CAF50),
+    secondary = LuxurySecondary,
+    onSecondary = TextOnPrimary,
 
-    secondary = androidx.compose.ui.graphics.Color(0xFF81C784),
+    tertiary = LuxuryAccent,
+    background = LuxuryBackground,
+    onBackground = TextPrimary,
 
-    background = androidx.compose.ui.graphics.Color(0xFF121212),
+    surface = LuxurySurface,
+    onSurface = TextPrimary,
 
-    surface = androidx.compose.ui.graphics.Color(0xFF1E1E1E)
-)
+    surfaceVariant = LuxurySurfaceSoft,
+    onSurfaceVariant = TextSecondary,
 
-private val LightColors = lightColorScheme(
-
-    primary = androidx.compose.ui.graphics.Color(0xFF4CAF50),
-
-    secondary = androidx.compose.ui.graphics.Color(0xFF81C784),
-
-    background = androidx.compose.ui.graphics.Color(0xFFF5F5F5),
-
-    surface = androidx.compose.ui.graphics.Color.White
+    error = ErrorRed,
+    outline = BorderMedium
 )
 
 @Composable
 fun NammaKelsaTheme(
-
-    darkTheme: Boolean =
-        isSystemInDarkTheme(),
-
     content: @Composable () -> Unit
 ) {
-
-    val colors = if (darkTheme)
-        DarkColors
-    else
-        LightColors
-
     MaterialTheme(
-
-        colorScheme = colors,
-
-        typography = Typography(),
-
+        colorScheme = AppColors,
+        typography = Typography,
         content = content
     )
 }

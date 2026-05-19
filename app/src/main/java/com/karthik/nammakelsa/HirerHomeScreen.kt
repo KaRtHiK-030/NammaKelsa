@@ -1,387 +1,304 @@
 ﻿package com.karthik.nammakelsa
 
 import android.content.Intent
-import androidx.compose.foundation.Image
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Chat
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import coil.compose.rememberAsyncImagePainter
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+
+data class WorkerCardData(
+    val workerId: String = "",
+    val name: String = "",
+    val location: String = "",
+    val availability: String = "Available"
+)
 
 @Composable
 fun HirerHomeScreen() {
 
-    val db = FirebaseFirestore.getInstance()
-
     val context = LocalContext.current
+    val auth = FirebaseAuth.getInstance()
+    val db = FirebaseFirestore.getInstance()
+    val currentUser = auth.currentUser ?: return
+    val hirerId = currentUser.uid
 
     var workers by remember {
-        mutableStateOf(listOf<Worker>())
+        mutableStateOf<List<WorkerCardData>>(emptyList())
     }
 
-    var selectedSkill by remember {
+    var hirerName by remember {
+        mutableStateOf("Hirer")
+    }
+
+    var isLoading by remember {
+        mutableStateOf(true)
+    }
+
+    var reviewWorkerId by remember {
         mutableStateOf("")
     }
 
-    var selectedLocation by remember {
+    var rating by remember {
         mutableStateOf("")
     }
 
-    var showFilterDialog by remember {
-        mutableStateOf(false)
+    var comment by remember {
+        mutableStateOf("")
     }
 
-    val listState = rememberLazyListState()
-
-    // LOAD WORKERS
     LaunchedEffect(Unit) {
 
-        db.collection("workers")
+        db.collection("hirers")
+            .document(hirerId)
             .get()
+            .addOnSuccessListener {
+                hirerName =
+                    it.getString("name") ?: "Hirer"
+            }
 
-            .addOnSuccessListener { result ->
+        db.collection("workers")
+            .addSnapshotListener { snap, _ ->
 
-                workers =
-                    result.toObjects(Worker::class.java)
+                workers = snap?.documents?.map { doc ->
+                    WorkerCardData(
+                        workerId = doc.id,
+                        name = doc.getString("name") ?: "Worker",
+                        location = doc.getString("location") ?: "",
+                        availability =
+                            doc.getString("availability")
+                                ?: "Available"
+                    )
+                } ?: emptyList()
+
+                isLoading = false
             }
     }
 
-    // FILTERED LIST
-    val filteredWorkers = workers.filter { worker ->
-
-        val skillMatch =
-
-            selectedSkill.isBlank()
-
-                    ||
-
-                    worker.skill.contains(
-                        selectedSkill,
-                        ignoreCase = true
+    if (reviewWorkerId.isNotBlank()) {
+        AlertDialog(
+            onDismissRequest = {
+                reviewWorkerId = ""
+            },
+            title = {
+                Text("Rate Worker")
+            },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = rating,
+                        onValueChange = {
+                            rating = it
+                        },
+                        label = {
+                            Text("Rating (1-5)")
+                        }
                     )
 
-                    ||
+                    Spacer(modifier = Modifier.height(12.dp))
 
-                    worker.skillsList.any {
+                    OutlinedTextField(
+                        value = comment,
+                        onValueChange = {
+                            comment = it
+                        },
+                        label = {
+                            Text("Review")
+                        }
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
 
-                        it["skill"]?.contains(
-                            selectedSkill,
-                            ignoreCase = true
-                        ) == true
+                        val ratingValue =
+                            rating.toFloatOrNull()
+
+                        if (
+                            ratingValue == null ||
+                            ratingValue < 1f ||
+                            ratingValue > 5f
+                        ) {
+                            Toast.makeText(
+                                context,
+                                "Invalid rating",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                            return@Button
+                        }
+
+                        val reviewRef =
+                            db.collection("reviews")
+                                .document()
+
+                        reviewRef.set(
+                            Review(
+                                reviewId = reviewRef.id,
+                                workerId = reviewWorkerId,
+                                userId = hirerId,
+                                reviewerName = hirerName,
+                                rating = ratingValue,
+                                comment = comment,
+                                timestamp = System.currentTimeMillis()
+                            )
+                        )
+
+                        reviewWorkerId = ""
+                        rating = ""
+                        comment = ""
                     }
-
-        val locationMatch =
-
-            selectedLocation.isBlank()
-
-                    ||
-
-                    worker.location.contains(
-                        selectedLocation,
-                        ignoreCase = true
-                    )
-
-        skillMatch && locationMatch
+                ) {
+                    Text("Submit")
+                }
+            }
+        )
     }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(
-                        MaterialTheme.colorScheme.primaryContainer,
-                        MaterialTheme.colorScheme.background
-                    )
-                )
-            )
+            .background(screenBgBrush())
             .padding(16.dp)
     ) {
 
-        // TOP BAR
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-
-            horizontalArrangement =
-                Arrangement.SpaceBetween
-        ) {
-
-            Text(
-                text = "Available Workers",
-
-                style = MaterialTheme
-                    .typography
-                    .headlineSmall
-            )
-
-            Button(
-                onClick = {
-                    showFilterDialog = true
-                }
-            ) {
-
-                Text("Filter")
-            }
-        }
-
-        Spacer(
-            modifier = Modifier.height(16.dp)
+        Text(
+            "Find Workers",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold
         )
 
-        // FILTER DIALOG
-        if (showFilterDialog) {
+        Spacer(modifier = Modifier.height(20.dp))
 
-            AlertDialog(
-
-                onDismissRequest = {
-                    showFilterDialog = false
-                },
-
-                title = {
-                    Text("Filter Workers")
-                },
-
-                text = {
-
-                    Column {
-
-                        OutlinedTextField(
-                            value = selectedSkill,
-
-                            onValueChange = {
-                                selectedSkill = it
-                            },
-
-                            label = {
-                                Text("Skill")
-                            }
-                        )
-
-                        Spacer(
-                            modifier = Modifier.height(10.dp)
-                        )
-
-                        OutlinedTextField(
-                            value = selectedLocation,
-
-                            onValueChange = {
-                                selectedLocation = it
-                            },
-
-                            label = {
-                                Text("Location")
-                            }
-                        )
-                    }
-                },
-
-                confirmButton = {
-
-                    Button(
-                        onClick = {
-                            showFilterDialog = false
-                        }
-                    ) {
-
-                        Text("Apply")
-                    }
-                }
-            )
+        if (isLoading) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+            return@Column
         }
 
-        // WORKERS LIST
-        Box(
-            modifier = Modifier.fillMaxSize()
+        LazyColumn(
+            verticalArrangement =
+                Arrangement.spacedBy(12.dp)
         ) {
+            items(workers) { worker ->
 
-            LazyColumn(
-
-                state = listState,
-
-                modifier = Modifier.fillMaxSize(),
-
-                contentPadding = PaddingValues(
-                    bottom = 120.dp
-                )
-            ) {
-
-                items(filteredWorkers) { worker ->
-
-                    ElevatedCard(
-
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 12.dp)
-
-                            // OPEN PROFILE
-                            .clickable {
-
-                                val intent = Intent(
+                ElevatedCard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            context.startActivity(
+                                Intent(
                                     context,
                                     WorkerDetailActivity::class.java
-                                )
-
-                                intent.putExtra(
-                                    "workerId",
-                                    worker.userId
-                                )
-
-                                intent.putExtra(
-                                    "name",
-                                    worker.name
-                                )
-
-                                intent.putExtra(
-                                    "skill",
-                                    worker.skill
-                                )
-
-                                intent.putExtra(
-                                    "location",
-                                    worker.location
-                                )
-
-                                intent.putExtra(
-                                    "charge",
-                                    worker.chargePerDay
-                                )
-
-                                intent.putExtra(
-                                    "phone",
-                                    worker.phoneNumber
-                                )
-
-                                intent.putExtra(
-                                    "whatsapp",
-                                    worker.whatsappNumber
-                                )
-
-                                intent.putExtra(
-                                    "imageUrl",
-                                    worker.imageUrl
-                                )
-
-                                context.startActivity(intent)
-                            },
-
-                        shape = RoundedCornerShape(20.dp)
+                                ).apply {
+                                    putExtra(
+                                        "workerId",
+                                        worker.workerId
+                                    )
+                                }
+                            )
+                        }
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp)
                     ) {
 
-                        Row(
-                            modifier = Modifier.padding(16.dp)
-                        ) {
+                        Text(
+                            worker.name,
+                            fontWeight = FontWeight.Bold
+                        )
 
-                            // PROFILE IMAGE
-                            Image(
-                                painter =
-                                    rememberAsyncImagePainter(
-                                        worker.imageUrl
-                                    ),
+                        Spacer(modifier = Modifier.height(6.dp))
 
-                                contentDescription = null,
+                        Text(worker.location)
 
-                                modifier = Modifier
-                                    .size(90.dp)
-                                    .clip(
-                                        RoundedCornerShape(16.dp)
-                                    ),
+                        Spacer(modifier = Modifier.height(6.dp))
 
-                                contentScale = ContentScale.Crop
-                            )
+                        Text(worker.availability)
 
-                            Spacer(
-                                modifier = Modifier.width(16.dp)
-                            )
+                        Spacer(modifier = Modifier.height(14.dp))
 
-                            Column {
+                        Row {
 
-                                // NAME
-                                Text(
-                                    text = worker.name,
-
-                                    style = MaterialTheme
-                                        .typography
-                                        .titleLarge
-                                )
-
-                                Spacer(
-                                    modifier = Modifier.height(6.dp)
-                                )
-
-                                // MAIN SKILL
-                                Text(
-                                    text =
-                                        "🛠 ${worker.skill}"
-                                )
-
-                                // EXTRA SKILLS
-                                if (worker.skillsList.isNotEmpty()) {
-
-                                    Spacer(
-                                        modifier = Modifier.height(6.dp)
+                            IconButton(
+                                onClick = {
+                                    context.startActivity(
+                                        Intent(
+                                            context,
+                                            ChatActivity::class.java
+                                        ).apply {
+                                            putExtra(
+                                                "receiverId",
+                                                worker.workerId
+                                            )
+                                        }
                                     )
-
-                                    worker.skillsList.forEach {
-
-                                        Text(
-                                            text =
-                                                "• ${it["skill"]} - ₹${it["charge"]}"
-                                        )
-                                    }
                                 }
+                            ) {
+                                Icon(Icons.Default.Chat, null)
+                            }
 
-                                Spacer(
-                                    modifier = Modifier.height(6.dp)
-                                )
+                            IconButton(
+                                onClick = {
+                                    reviewWorkerId =
+                                        worker.workerId
+                                }
+                            ) {
+                                Icon(Icons.Default.Star, null)
+                            }
 
-                                // LOCATION
-                                Text(
-                                    text =
-                                        "📍 ${worker.location}"
-                                )
+                            IconButton(
+                                onClick = {
+                                    db.collection("savedWorkers")
+                                        .document(
+                                            "${hirerId}_${worker.workerId}"
+                                        )
+                                        .set(
+                                            mapOf(
+                                                "hirerId" to hirerId,
+                                                "workerId" to worker.workerId
+                                            )
+                                        )
+                                }
+                            ) {
+                                Icon(Icons.Default.Favorite, null)
+                            }
 
-                                Spacer(
-                                    modifier = Modifier.height(6.dp)
-                                )
-
-                                // CHARGE
-                                Text(
-                                    text =
-                                        "₹ ${worker.chargePerDay} per day",
-
-                                    style = MaterialTheme
-                                        .typography
-                                        .titleMedium
-                                )
-
-                                Spacer(
-                                    modifier = Modifier.height(6.dp)
-                                )
-
-                                // AVAILABILITY
-                                Text(
-
-                                    text = when(worker.availability) {
-
-                                        "Busy" -> "🔴 Busy"
-
-                                        "Offline" -> "⚫ Offline"
-
-                                        else -> "🟢 Available"
-                                    }
-                                )
+                            IconButton(
+                                onClick = {
+                                    context.startActivity(
+                                        Intent(
+                                            context,
+                                            WorkerDetailActivity::class.java
+                                        ).apply {
+                                            putExtra(
+                                                "workerId",
+                                                worker.workerId
+                                            )
+                                        }
+                                    )
+                                }
+                            ) {
+                                Icon(Icons.Default.Send, null)
                             }
                         }
                     }

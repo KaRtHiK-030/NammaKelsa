@@ -1,287 +1,387 @@
 package com.karthik.nammakelsa
 
+import android.app.Activity
 import android.content.Intent
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Chat
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HirerProfileScreen() {
 
     val context = LocalContext.current
-    val userId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
+    val activity = context as? Activity
+    val auth = FirebaseAuth.getInstance()
+    val firestore = FirebaseFirestore.getInstance()
+    val currentUser = auth.currentUser
+
+    if (currentUser == null) {
+        LaunchedEffect(Unit) {
+            activity?.finish()
+        }
+        return
+    }
+
+    val userId = currentUser.uid
 
     var name by remember { mutableStateOf("") }
     var location by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
     var whatsapp by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
-    var showDeleteDialog by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(true) }
 
-    val listState = rememberLazyListState()
+    var showDeleteDialog by remember {
+        mutableStateOf(false)
+    }
 
-    // LOAD PROFILE
+    var deletePassword by remember {
+        mutableStateOf("")
+    }
+
+    var deleting by remember {
+        mutableStateOf(false)
+    }
+
+    fun logout() {
+        auth.signOut()
+
+        context.startActivity(
+            Intent(
+                context,
+                RoleSelectionActivity::class.java
+            ).apply {
+                flags =
+                    Intent.FLAG_ACTIVITY_NEW_TASK or
+                            Intent.FLAG_ACTIVITY_CLEAR_TASK
+            }
+        )
+
+        activity?.finish()
+    }
+
+    fun deleteAccount() {
+
+        if (deletePassword.isBlank()) {
+            Toast.makeText(
+                context,
+                "Enter password",
+                Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
+
+        val email = currentUser.email ?: return
+
+        deleting = true
+
+        val credential =
+            EmailAuthProvider.getCredential(
+                email,
+                deletePassword
+            )
+
+        currentUser.reauthenticate(credential)
+            .addOnSuccessListener {
+
+                firestore.collection("hirers")
+                    .document(userId)
+                    .delete()
+
+                firestore.collection("presence")
+                    .document(userId)
+                    .delete()
+
+                firestore.collection("chats")
+                    .whereArrayContains(
+                        "participants",
+                        userId
+                    )
+                    .get()
+                    .addOnSuccessListener { snap ->
+
+                        val batch =
+                            firestore.batch()
+
+                        snap.documents.forEach {
+                            batch.delete(it.reference)
+                        }
+
+                        batch.commit()
+                            .addOnSuccessListener {
+
+                                currentUser.delete()
+                                    .addOnSuccessListener {
+                                        deleting = false
+                                        logout()
+                                    }
+                            }
+                    }
+            }
+            .addOnFailureListener {
+                deleting = false
+
+                Toast.makeText(
+                    context,
+                    "Wrong password",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+    }
+
     LaunchedEffect(Unit) {
-        FirebaseFirestore.getInstance()
-            .collection("hirers")
+        firestore.collection("hirers")
             .document(userId)
             .get()
             .addOnSuccessListener { document ->
-                name     = document.getString("name")           ?: ""
-                location = document.getString("location")       ?: ""
-                phone    = document.getString("phoneNumber")    ?: ""
-                whatsapp = document.getString("whatsappNumber") ?: ""
+                name = document.getString("name") ?: ""
+                location =
+                    document.getString("location") ?: ""
+                phone =
+                    document.getString("phoneNumber") ?: ""
+                whatsapp =
+                    document.getString("whatsappNumber") ?: ""
+                isLoading = false
             }
-        email = FirebaseAuth.getInstance().currentUser?.email ?: ""
+            .addOnFailureListener {
+                isLoading = false
+            }
     }
 
-    // DELETE CONFIRMATION DIALOG
+    BackHandler {
+        activity?.finish()
+    }
+
     if (showDeleteDialog) {
         AlertDialog(
-            onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Delete Account") },
-            text  = { Text("Are you sure you want to delete your account? This action cannot be undone.") },
+            onDismissRequest = {
+                showDeleteDialog = false
+            },
+            title = {
+                Text("Delete Account")
+            },
+            text = {
+                Column {
+                    Text(
+                        "Enter password to permanently delete account."
+                    )
+
+                    Spacer(
+                        modifier = Modifier.height(16.dp)
+                    )
+
+                    OutlinedTextField(
+                        value = deletePassword,
+                        onValueChange = {
+                            deletePassword = it
+                        },
+                        visualTransformation =
+                            PasswordVisualTransformation(),
+                        label = {
+                            Text("Password")
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
             confirmButton = {
                 Button(
                     onClick = {
-                        val user = FirebaseAuth.getInstance().currentUser
-                        FirebaseFirestore.getInstance()
-                            .collection("hirers")
-                            .document(userId)
-                            .delete()
-                            .addOnSuccessListener {
-                                user?.delete()?.addOnSuccessListener {
-                                    Toast.makeText(context, "Account Deleted", Toast.LENGTH_LONG).show()
-                                    val intent = Intent(context, RoleSelectionActivity::class.java)
-                                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                                    context.startActivity(intent)
-                                }
-                            }
+                        deleteAccount()
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                ) { Text("Delete") }
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor =
+                            MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    if (deleting) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp)
+                        )
+                    } else {
+                        Text("Delete")
+                    }
+                }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") }
+                OutlinedButton(
+                    onClick = {
+                        showDeleteDialog = false
+                    }
+                ) {
+                    Text("Cancel")
+                }
             }
         )
     }
 
+    if (isLoading) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(screenBgBrush()),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator()
+        }
+        return
+    }
+
     LazyColumn(
-        state = listState,
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(
-                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
-                        MaterialTheme.colorScheme.background
-                    )
-                )
-            ),
-        contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 120.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .background(screenBgBrush())
+            .padding(16.dp),
+        horizontalAlignment =
+            Alignment.CenterHorizontally,
+        contentPadding =
+            PaddingValues(bottom = 120.dp)
     ) {
+
         item {
-            // HEADER
             Text(
                 text = "My Profile",
-                style = MaterialTheme.typography.headlineMedium,
+                style =
+                    MaterialTheme.typography
+                        .headlineMedium,
                 fontWeight = FontWeight.Bold
             )
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // ── INITIAL AVATAR (replaces profile image) ──────────────────
-            Box(modifier = Modifier.size(140.dp)) {
-                Surface(
-                    modifier = Modifier.size(140.dp),
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.primary
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Text(
-                            text = name.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
-                            fontSize = 56.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimary,
-                            textAlign = TextAlign.Center
-                        )
-                    }
-                }
-
-                // HIRER BADGE
-                Surface(
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .size(36.dp),
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    shadowElevation = 4.dp
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.Default.BusinessCenter,
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(
-                text = name,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold
-            )
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Text(
-                text = "Hirer Account",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // PROFILE INFORMATION CARD
             ElevatedCard(
-                shape = RoundedCornerShape(20.dp),
-                modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp)
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Column(modifier = Modifier.padding(24.dp)) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment =
+                        Alignment.CenterHorizontally
+                ) {
+
+                    InitialAvatar(
+                        name = name,
+                        size = 120.dp
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
 
                     Text(
-                        text = "Contact Information",
-                        style = MaterialTheme.typography.titleLarge,
+                        text = name.ifBlank { "Hirer" },
+                        style =
+                            MaterialTheme.typography
+                                .headlineSmall,
                         fontWeight = FontWeight.Bold
                     )
 
-                    Spacer(modifier = Modifier.height(20.dp))
+                    Spacer(modifier = Modifier.height(24.dp))
 
-                    ProfileInfoRow(icon = Icons.Default.Email,      label = "Email",    value = email.ifBlank    { "Not provided" })
-                    Spacer(modifier = Modifier.height(16.dp)); HorizontalDivider()
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    ProfileInfoRow(icon = Icons.Default.LocationOn, label = "Location", value = location.ifBlank { "Not provided" })
-                    Spacer(modifier = Modifier.height(16.dp)); HorizontalDivider()
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    ProfileInfoRow(icon = Icons.Default.Phone,      label = "Phone",    value = phone.ifBlank    { "Not provided" })
-                    Spacer(modifier = Modifier.height(16.dp)); HorizontalDivider()
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    ProfileInfoRow(icon = Icons.Default.Chat,       label = "WhatsApp", value = whatsapp.ifBlank { "Not provided" })
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // STATISTICS CARD
-            ElevatedCard(
-                shape = RoundedCornerShape(20.dp),
-                modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp)
-            ) {
-                Column(modifier = Modifier.padding(24.dp)) {
-                    Text(
-                        text = "Account Statistics",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
+                    ProfileInfoRow(
+                        icon = Icons.Default.LocationOn,
+                        label = "Location",
+                        value =
+                            location.ifBlank { "Not set" }
                     )
-                    Spacer(modifier = Modifier.height(20.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly
-                    ) {
-                        StatisticItem(icon = Icons.Default.WorkOutline, label = "Posted Jobs",    value = "0")
-                        VerticalDivider(modifier = Modifier.height(60.dp))
-                        StatisticItem(icon = Icons.Default.People,      label = "Hired Workers",  value = "0")
-                        VerticalDivider(modifier = Modifier.height(60.dp))
-                        StatisticItem(icon = Icons.Default.Star,        label = "Reviews Given",  value = "0")
-                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    ProfileInfoRow(
+                        icon = Icons.Default.Phone,
+                        label = "Phone",
+                        value =
+                            phone.ifBlank { "Not set" }
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    ProfileInfoRow(
+                        icon = Icons.Default.Chat,
+                        label = "WhatsApp",
+                        value =
+                            whatsapp.ifBlank { "Not set" }
+                    )
                 }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // ACTION BUTTONS
             Button(
                 onClick = {
-                    val intent = Intent(context, ProfileActivity::class.java)
-                    intent.putExtra("role", "hirer")
-                    context.startActivity(intent)
+                    context.startActivity(
+                        Intent(
+                            context,
+                            ProfileActivity::class.java
+                        )
+                    )
                 },
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-                shape = RoundedCornerShape(16.dp)
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Icon(imageVector = Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(20.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Edit Profile", style = MaterialTheme.typography.titleMedium)
+                Text("Edit Profile")
             }
 
             Spacer(modifier = Modifier.height(12.dp))
 
             OutlinedButton(
                 onClick = {
-                    FirebaseAuth.getInstance().signOut()
-                    val intent = Intent(context, RoleSelectionActivity::class.java)
-                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                    context.startActivity(intent)
-                    Toast.makeText(context, "Logged out successfully", Toast.LENGTH_SHORT).show()
+                    logout()
                 },
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-                shape = RoundedCornerShape(16.dp)
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Icon(imageVector = Icons.Default.Logout, contentDescription = null, modifier = Modifier.size(20.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Logout", style = MaterialTheme.typography.titleMedium)
+                Icon(
+                    Icons.Default.Logout,
+                    contentDescription = null
+                )
+
+                Spacer(
+                    modifier = Modifier.width(8.dp)
+                )
+
+                Text("Logout")
             }
 
             Spacer(modifier = Modifier.height(12.dp))
 
             Button(
-                onClick = { showDeleteDialog = true },
+                onClick = {
+                    showDeleteDialog = true
+                },
+                modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.errorContainer,
-                    contentColor   = MaterialTheme.colorScheme.onErrorContainer
-                ),
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-                shape = RoundedCornerShape(16.dp)
+                    containerColor =
+                        MaterialTheme.colorScheme.error
+                )
             ) {
-                Icon(imageVector = Icons.Default.DeleteForever, contentDescription = null, modifier = Modifier.size(20.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Delete Account", style = MaterialTheme.typography.titleMedium)
+                Icon(
+                    Icons.Default.Delete,
+                    contentDescription = null
+                )
+
+                Spacer(
+                    modifier = Modifier.width(8.dp)
+                )
+
+                Text("Delete Account")
             }
         }
     }
 }
-
-// ── Shared composables (keep in a shared file if already defined elsewhere) ──
 
 @Composable
 fun ProfileInfoRow(
@@ -289,36 +389,30 @@ fun ProfileInfoRow(
     label: String,
     value: String
 ) {
-    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Surface(
-            shape = RoundedCornerShape(12.dp),
-            color = MaterialTheme.colorScheme.primaryContainer,
-            modifier = Modifier.size(40.dp)
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
-            }
-        }
-        Spacer(modifier = Modifier.width(16.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(text = label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(text = value, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
-        }
-    }
-}
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
 
-@Composable
-fun StatisticItem(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: String,
-    value: String
-) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(8.dp)) {
-        Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(28.dp), tint = MaterialTheme.colorScheme.primary)
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(text = value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(text = label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Icon(
+            imageVector = icon,
+            contentDescription = label
+        )
+
+        Spacer(
+            modifier = Modifier.width(12.dp)
+        )
+
+        Column {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelMedium
+            )
+
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodyLarge
+            )
+        }
     }
 }

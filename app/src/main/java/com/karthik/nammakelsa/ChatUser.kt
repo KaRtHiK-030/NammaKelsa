@@ -1,7 +1,6 @@
 package com.karthik.nammakelsa
 
 data class ChatUser(
-
     val userId: String = "",
 
     val name: String = "",
@@ -10,5 +9,9 @@ data class ChatUser(
 
     val lastMessage: String = "",
 
-    val online: Boolean = false
+    val lastMessageTime: Long = 0L,
+
+    val online: Boolean = false,
+
+    val lastSeen: Long = 0L
 )
