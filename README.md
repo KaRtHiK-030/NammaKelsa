@@ -659,38 +659,24 @@ Realtime DB:  chats/{uid1_uid2}/messages  ◄──────────┘
 
 <div align="center">
 
-<table>
-  <tr>
-    <td align="center"><b>Splash / Login</b></td>
-    <td align="center"><b>Worker Home</b></td>
-    <td align="center"><b>Hirer Search</b></td>
-  </tr>
-  <tr>
-    <td><img src="https://github.com/user-attachments/assets/d601de8e-3708-431f-b676-be60fbf518fd" width="220"/></td>
-    <td><img src="https://github.com/user-attachments/assets/ac19b690-8cf0-4281-9f46-3eb5cd21031a" width="220"/></td>
-    <td><img src="https://github.com/user-attachments/assets/62e66910-6179-4c21-8ee2-72edfa9609a7" width="220"/></td>
-  </tr>
-  <tr>
-    <td align="center"><b>Worker Profile</b></td>
-    <td align="center"><b>Chat</b></td>
-    <td align="center"><b>Request Management</b></td>
-  </tr>
-  <tr>
-    <td><img src="https://github.com/user-attachments/assets/27f52b86-5248-413d-ba8b-4fa5cfc1db32" width="220"/></td>
-    <td><img src="https://github.com/user-attachments/assets/b427a371-677d-4765-98f7-b2232e713188" width="220"/></td>
-    <td><img src="https://github.com/user-attachments/assets/382eaca8-4ddc-4db3-b0d8-d84fe54202c2" width="220"/></td>
-  </tr>
-  <tr>
-    <td align="center"><b>Favorites</b></td>
-    <td align="center"><b>Reviews</b></td>
-    <td align="center"><b>Hirer Dashboard</b></td>
-  </tr>
-  <tr>
-    <td><img src="https://github.com/user-attachments/assets/aa5117bb-082a-4374-a187-09fbdad74bfb" width="220"/></td>
-    <td><img src="https://github.com/user-attachments/assets/d69409e9-f19e-4ebf-a20b-dbc45f7c6ef8" width="220"/></td>
-    <td><img src="https://github.com/user-attachments/assets/b3a15543-dcce-4330-b92d-9e326d4632c0" width="220"/></td>
-  </tr>
-</table>
+<img src="https://github.com/user-attachments/assets/065959ea-4719-4839-86db-5b189df2e12f" width="220"/>
+<img src="https://github.com/user-attachments/assets/d5f280ee-c7bf-4353-b26d-292d8a9d23a2" width="220"/>
+<img src="https://github.com/user-attachments/assets/1cf124de-ed83-4ff5-84ff-91ef578cf850" width="220"/>
+<img src="https://github.com/user-attachments/assets/3e760d17-6700-4685-9f42-26c382223c23" width="220"/>
+
+<br/><br/>
+
+<img src="https://github.com/user-attachments/assets/5892618c-63c2-4f57-9f6e-cc6aa3fab797" width="220"/>
+<img src="https://github.com/user-attachments/assets/d86290bd-72f3-4182-aed4-0e6d3af5dd31" width="220"/>
+<img src="https://github.com/user-attachments/assets/6fd80f65-1763-4cab-820a-c450d032c419" width="220"/>
+<img src="https://github.com/user-attachments/assets/3dd40182-e0fa-456e-aa10-79940971cf31" width="220"/>
+
+<br/><br/>
+
+<img src="https://github.com/user-attachments/assets/3bf9fb91-dcf3-479f-ad26-e5dd848845cc" width="220"/>
+<img src="https://github.com/user-attachments/assets/30a39c5b-3b5a-4ef3-894d-f42562a78e39" width="220"/>
+<img src="https://github.com/user-attachments/assets/a96c8ab5-bb52-4699-b95c-4744b1559e0c" width="220"/>
+<img src="https://github.com/user-attachments/assets/20969d8a-4117-42f9-a196-287266c5cf68" width="220"/>
 
 </div>
 
